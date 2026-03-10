@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!DOCTYPE properties SYSTEM "http://java.sun.com/dtd/properties.dtd">
+<properties>
+  <comment>Bean and Basic ORM constant values</comment>
+  <entry key="TIMESTAMP_FORMAT">yyyy-MM-dd HH:mm:ss</entry>
+  <entry key="DATE_FORMAT">yyyy-MM-dd</entry>
+  <entry key="TIME_FORMAT">HH:mm:ss</entry>
+  <entry key="DATABASE_CLASSES_PACKAGE">com.sa.orm.pgsql.v4</entry>
+  <entry key="LINE_SEPARATOR">
+</entry>
+  <entry key="INDENT_UNIT">  </entry>
+  <entry key="MAX_RECORDS_SHOWN">10</entry>
+  <entry key="SUPER_LEVEL">2</entry>
+  <!-- entry key="CONNECTION_POOL_CLASS">com.sa.web.test.pool.ConnectionPool</entry -->
+  
+  <entry key="DB_USER_NAME">test_db_user</entry>
+  <entry key="DB_USER_PASSWORD">test_db_P@ssw0rd</entry>
+  <entry key="DB_DRIVER_CLASS_NAME">org.postgresql.Driver</entry>
+  <entry key="DB_URL">jdbc:postgresql://localhost:5432/test_db</entry>
+  <entry key="DB_MAX_ACTIVE">5</entry>
+  <entry key="DB_MAX_IDLE">5</entry>
+  <entry key="DB_MAX_WAIT">2</entry>
+
+  <entry key="RETURN_AFFECTED_OBJECTS_INSERT">true</entry>
+  <entry key="RETURN_AFFECTED_OBJECTS_UPDATE">true</entry>
+  <entry key="RETURN_AFFECTED_OBJECTS_DELETE">true</entry>
+</properties>

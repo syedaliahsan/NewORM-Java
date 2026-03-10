@@ -1,6 +1,15 @@
-ORM*
 .project
 .settings/
 .classpath
 ProjectDocs/
 bin/
+src/main/resources/ORMInfo_full.xml
+src/main/resources/ORMInfo_minimal-mysql5_0.xml
+src/main/resources/ORMInfo_minimal-pgsql4.xml
+src/main/resources/ORMInfo.dtd
+src/main/resources/ORMInfo.mysql5.0.sample.xml
+src/main/resources/ORMInfo.pg.4.sample.xml
+ORM_PGSQL.jar
+ORM_PGSQL.jardesc
+ORM.jar
+ORM.jardesc
