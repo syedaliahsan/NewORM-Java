@@ -1,0 +1,6 @@
+ORM*
+.project
+.settings/
+.classpath
+ProjectDocs/
+bin/
