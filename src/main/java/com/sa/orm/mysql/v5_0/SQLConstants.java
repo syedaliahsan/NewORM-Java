@@ -100,6 +100,8 @@ public class SQLConstants implements com.sa.orm.SQLConstants {
 
   public static final String SUB_CLAUSE_RIGHT_OUTER_JOIN = "Right Outer Join";
 
+  public static final String CLAUSE_UNION = " Union ";
+
   /**
    * Not Supported in MySQL as of now.
    */
@@ -614,4 +616,11 @@ public class SQLConstants implements com.sa.orm.SQLConstants {
     return SUB_CLAUSE_RIGHT_OUTER_JOIN;
   }
 
+  /**
+   * {@inheritDoc}
+   */
+  @Override
+  public String getClauseUnion() {
+    return CLAUSE_UNION;
+  }
 } // end of class SQLConstants

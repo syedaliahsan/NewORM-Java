@@ -967,6 +967,7 @@ public abstract class AbstractDAO implements DAO {
       } // end of if
       
       String[] fields = StringUtils.splitString(ORMInfoManager.getPlainDBFieldNames(pojo), sqlConstants.getFieldsSeparator());
+      logger.finest("object fields: " + Arrays.toString(fields));
       resultObj = update(pojo, fields, con, returnUpdatedObject);
       if(isNewConnection) {
         con.commit();
@@ -2114,6 +2115,18 @@ public abstract class AbstractDAO implements DAO {
     return affectedObjects;
   } // end of  method executeUpdateQuery
   
+  public <T> Collection<T> executeUnionQuery(Object pojo, String[] queries, Connection con) throws SQLException {
+    StringBuffer qry = new StringBuffer();
+    for (int i = 0; i < queries.length; i++) {
+      if(qry.toString().trim().length() > 0) {
+        qry.append(sqlConstants.getClauseUnion());
+      } // end of if
+      qry.append(queries[i]);
+    } // end of for
+
+    return (Collection<T>)this.executeQuery(qry.toString(), pojo.getClass(), pojo, con);
+  }
+
   protected int executeUpdate(String qry, Object pojo, Connection con)
       throws SQLException {
 

@@ -495,24 +495,63 @@ public class DAOTest {
     try {
       System.out.println("Testing Column Comparison...");
       User user = new User();
-      
+
       SQLCriterion criterion = sqlCriterionFactory.createColumnComparison(
-          "id", 
-          "User", 
-          SQLCriterion.EQUAL_TO, 
-          "userTypeId", 
+          "id",
+          "User",
+          SQLCriterion.EQUAL_TO,
+          "userTypeId",
           "User"
       );
-      
+
       System.out.println("Criterion String: " + criterion.getCriterionString());
-      
+
       // Execute a search with this criterion
       Collection<User> results = daoObj.search(user, null, new SQLCriterion[] { criterion }, BOOLEAN_OPERATOR.AND, null, -1, 10, null);
       System.out.println("Column Comparison Search executed successfully. Found " + results.size() + " records.");
-      
+
     } catch (Exception e) {
        System.out.println("Column Comparison Test Failed:");
        e.printStackTrace();
+    }
+  }
+
+  public static void testExecuteUnionQuery() throws Exception {
+    try {
+      System.out.println("Testing Execute Union Query...");
+
+      // Create two separate queries to union
+      String[] queries = new String[2];
+
+      // Query 1: Get users with id = 1
+      User user1 = new User();
+      SQLCriterion[] criteria1 = new SQLCriterion[1];
+      criteria1[0] = sqlCriterionFactory.createEqualTo("id", user1, 1);
+      String[] fields1 = new String[] {"User.id", "User.firstName", "User.lastName", "User.email"};
+      queries[0] = daoObj.createSelectQuery(user1, ORMInfoManager.SUPER_LEVEL, fields1, null, criteria1, BOOLEAN_OPERATOR.AND, null, -1, -1, null);
+
+      // Query 2: Get users with id = 2
+      User user2 = new User();
+      SQLCriterion[] criteria2 = new SQLCriterion[1];
+      criteria2[0] = sqlCriterionFactory.createEqualTo("id", user2, 2);
+      String[] fields2 = new String[] {"User.id", "User.firstName", "User.lastName", "User.email"};
+      queries[1] = daoObj.createSelectQuery(user2, ORMInfoManager.SUPER_LEVEL, fields2, null, criteria2, BOOLEAN_OPERATOR.AND, null, -1, -1, null);
+
+      System.out.println("Query 1: " + queries[0]);
+      System.out.println("Query 2: " + queries[1]);
+
+      // Execute the union query
+      Collection<User> results = daoObj.executeUnionQuery(new User(), queries, null);
+
+      System.out.println("Union Query executed successfully. Found " + results.size() + " records.");
+      for (User user : results) {
+        System.out.println("User: " + user.getId() + " - " + user.getFirstName() + " " + user.getLastName() + " (" + user.getEmail() + ")");
+      }
+
+    } catch (Exception e) {
+      System.out.println("Execute Union Query Test Failed:");
+      e.printStackTrace();
+      throw e;
     }
   }
 
@@ -563,7 +602,8 @@ public class DAOTest {
 //
 //      testSearchWithJoins();
 //      testColumnComparison();
-//      
+      testExecuteUnionQuery();
+//
       join();
     }
     catch(Exception e) {

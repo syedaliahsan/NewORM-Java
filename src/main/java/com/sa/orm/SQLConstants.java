@@ -346,4 +346,9 @@ public interface SQLConstants {
    */
   public String getSubClauseValues();
 
+  /**
+   * @return Returns the CLAUSE_UNION.
+   */
+  public String getClauseUnion();
+
 } // end of interface SQLConstants

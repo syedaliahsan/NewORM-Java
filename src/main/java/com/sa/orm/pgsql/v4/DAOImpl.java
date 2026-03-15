@@ -295,7 +295,7 @@ public class DAOImpl extends AbstractDAO {
       if(str.length() > 0) {
         str.append(sqlConstants.getFieldsSeparator());
       } // end of if
-      str.append(wrapFields((String)colsVec.elementAt(i)));
+      str.append(StringUtils.wrapDBField((String)colsVec.elementAt(i), SQLConstants.FIELD_PREFIX));
       str.append(sqlConstants.getOpEqual());
       str.append(valuesVec.elementAt(i));
     } // end of for
