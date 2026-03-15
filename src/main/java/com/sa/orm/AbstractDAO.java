@@ -457,11 +457,11 @@ public abstract class AbstractDAO implements DAO {
    * {@inheritDoc}
    */
   public Collection searchGroupBy(Object pojo, String[] fields,
-      com.sa.orm.SQLFunction[] functions, SQLCriterion[] criteria, BOOLEAN_OPERATOR booleanOperator,
+      SQLFunction[] functions, SQLCriterion[] criteria, BOOLEAN_OPERATOR booleanOperator,
       String sortBy, Connection con)
     throws ORMException {
     
-    return searchGroupBy(pojo, ORMInfoManager.SUPER_LEVEL, fields, functions, criteria, booleanOperator,
+    return searchGroupBy(pojo, fields, functions, criteria, booleanOperator,
         sortBy, -1, -1, con);
   } // end of method searchGroupBy
 
@@ -469,23 +469,11 @@ public abstract class AbstractDAO implements DAO {
    * {@inheritDoc}
    */
   public Collection searchGroupBy(Object pojo, String[] fields,
-      com.sa.orm.SQLFunction[] functions, SQLCriterion[] criteria, BOOLEAN_OPERATOR booleanOperator,
-      String sortBy, int limitStart, int limitSize, Connection con)
-    throws ORMException {
-    
-    return searchGroupBy(pojo, ORMInfoManager.SUPER_LEVEL, fields, functions, criteria, booleanOperator,
-        sortBy, limitStart, limitSize, con);
-  } 
-
-  /**
-   * {@inheritDoc}
-   */
-  public Collection searchGroupBy(Object pojo, String[] fields,
-      com.sa.orm.SQLFunction[] functions, SQLCriterion[] criteria, BOOLEAN_OPERATOR booleanOperator,
+      SQLFunction[] functions, SQLCriterion[] criteria, BOOLEAN_OPERATOR booleanOperator,
       String sortBy, List<Join> joins, Connection con)
     throws ORMException {
     
-    return searchGroupBy(pojo, ORMInfoManager.SUPER_LEVEL, fields, functions, criteria, booleanOperator,
+    return searchGroupBy(pojo, fields, functions, criteria, booleanOperator,
         sortBy, -1, -1, joins, con);
   } 
 
@@ -493,36 +481,24 @@ public abstract class AbstractDAO implements DAO {
    * {@inheritDoc}
    */
   public Collection searchGroupBy(Object pojo, String[] fields,
-      com.sa.orm.SQLFunction[] functions, SQLCriterion[] criteria, BOOLEAN_OPERATOR booleanOperator,
-      String sortBy, int limitStart, int limitSize, List<Join> joins, Connection con)
-    throws ORMException {
-    
-    return searchGroupBy(pojo, ORMInfoManager.SUPER_LEVEL, fields, functions, criteria, booleanOperator,
-        sortBy, limitStart, limitSize, joins, con);
-  }
-
-  /**
-   * {@inheritDoc}
-   */
-  public Collection searchGroupBy(Object pojo, int level, String[] fields,
-      com.sa.orm.SQLFunction[] functions, SQLCriterion[] criteria, BOOLEAN_OPERATOR booleanOperator,
+      SQLFunction[] functions, SQLCriterion[] criteria, BOOLEAN_OPERATOR booleanOperator,
       String sortBy, int limitStart, int limitSize, Connection con)
     throws ORMException {
-      return searchGroupBy(pojo, level, fields, functions, criteria, booleanOperator, sortBy, limitStart, limitSize, null, con);
+      return searchGroupBy(pojo, fields, functions, criteria, booleanOperator, sortBy, limitStart, limitSize, null, con);
   }
 
   /**
    * {@inheritDoc}
    */
-  public Collection searchGroupBy(Object pojo, int level, String[] fields,
-      com.sa.orm.SQLFunction[] functions, SQLCriterion[] criteria, BOOLEAN_OPERATOR booleanOperator,
+  public Collection searchGroupBy(Object pojo, String[] fields,
+      SQLFunction[] functions, SQLCriterion[] criteria, BOOLEAN_OPERATOR booleanOperator,
       String sortBy, int limitStart, int limitSize, List<Join> joins, Connection con)
     throws ORMException {
 
     long currentMillis = 0L;
     currentMillis = System.currentTimeMillis();
     
-    String qry = createGroupByQuery(pojo, level, fields, functions,
+    String qry = createGroupByQuery(pojo, fields, functions,
         criteria, booleanOperator, sortBy, limitStart, limitSize, joins);
 
     logger.finest("Group by query built in " + (System.currentTimeMillis() - currentMillis) + " milliseconds"); 
@@ -531,7 +507,7 @@ public abstract class AbstractDAO implements DAO {
     
     currentMillis = System.currentTimeMillis();
 
-    Collection<String[]> result = selectQueryVec(qry, con);
+    Collection<Object[]> result = executeSelectQuery(qry, con);
 
     logger.finest("Group by query executed and data populated as Collection of arrays of strings in " + (System.currentTimeMillis() - currentMillis) + " milliseconds"); 
 
@@ -1335,19 +1311,19 @@ public abstract class AbstractDAO implements DAO {
   /**
    * {@inheritDoc}
    */
-  public String createGroupByQuery(Object pojo, int level, String[] fields, 
-      com.sa.orm.SQLFunction[] functions, SQLCriterion[] criteria, BOOLEAN_OPERATOR booleanOperator,
+  public String createGroupByQuery(Object pojo, String[] fields, 
+      SQLFunction[] functions, SQLCriterion[] criteria, BOOLEAN_OPERATOR booleanOperator,
       String sortBy, int limitStart, int limitSize) {
-    return createSelectQuery(pojo, level, fields, functions, criteria, booleanOperator, sortBy, limitStart, limitSize, null);
+    return createSelectQuery(pojo, 0, fields, true, functions, criteria, booleanOperator, sortBy, limitStart, limitSize, null);
   } 
 
   /**
    * {@inheritDoc}
    */
-  public String createGroupByQuery(Object pojo, int level, String[] fields, 
-      com.sa.orm.SQLFunction[] functions, SQLCriterion[] criteria, BOOLEAN_OPERATOR booleanOperator,
+  public String createGroupByQuery(Object pojo, String[] fields, 
+      SQLFunction[] functions, SQLCriterion[] criteria, BOOLEAN_OPERATOR booleanOperator,
       String sortBy, int limitStart, int limitSize, List<Join> joins) {
-    return createSelectQuery(pojo, level, fields, functions, criteria, booleanOperator, sortBy, limitStart, limitSize, joins);
+    return createSelectQuery(pojo, 0, fields, true, functions, criteria, booleanOperator, sortBy, limitStart, limitSize, joins);
   }
   
   /**
@@ -1388,7 +1364,7 @@ public abstract class AbstractDAO implements DAO {
    * {@inheritDoc}
    */
   public String createSelectQuery(Object pojo, int level, String[] fields,
-      com.sa.orm.SQLFunction[] functions, SQLCriterion[] criteria, BOOLEAN_OPERATOR booleanOperator,
+      SQLFunction[] functions, SQLCriterion[] criteria, BOOLEAN_OPERATOR booleanOperator,
       String sortBy, int limitStart, int limitSize) {
     return createSelectQuery(pojo, level, fields, functions, criteria, booleanOperator, sortBy, limitStart, limitSize, null);
   }
@@ -1397,7 +1373,17 @@ public abstract class AbstractDAO implements DAO {
    * {@inheritDoc}
    */
   public String createSelectQuery(Object pojo, int level, String[] fields, 
-      com.sa.orm.SQLFunction[] functions, SQLCriterion[] criteria, BOOLEAN_OPERATOR booleanOperator,
+      SQLFunction[] functions, SQLCriterion[] criteria, BOOLEAN_OPERATOR booleanOperator,
+      String sortBy, int limitStart, int limitSize, List<Join> joins) {
+    return createSelectQuery(pojo, level, fields, false, functions, criteria,
+        booleanOperator, sortBy, limitStart, limitSize, joins);
+  }
+  
+  /**
+   * {@inheritDoc}
+   */
+  public String createSelectQuery(Object pojo, int level, String[] fields, boolean isForGroupByQuery,
+      SQLFunction[] functions, SQLCriterion[] criteria, BOOLEAN_OPERATOR booleanOperator,
       String sortBy, int limitStart, int limitSize, List<Join> joins) {
     StringBuffer strFields = new StringBuffer("");
     StringBuffer from = new StringBuffer("");
@@ -1408,7 +1394,7 @@ public abstract class AbstractDAO implements DAO {
     if(fields != null && fields.length > 0) {
       strFields.append(wrapFields(StringUtils.stringArrayToString(fields, sqlConstants.getFieldsSeparator())));
     } // end of if
-    else {
+    else if(isForGroupByQuery == false) {
       strFields.append(wrapFields(ORMInfoManager.getQualifiedDBFieldNames(pojo)));
     } // end of if
     String entityName = ORMInfoManager.getEntityName(pojo);
@@ -1434,21 +1420,6 @@ public abstract class AbstractDAO implements DAO {
           String parentTableReferenceField = ORMInfoManager.getQualifiedField(null, parentPK, true);
           String childTableReferenceField = ORMInfoManager.getQualifiedField(null, ORMInfoManager.getPrimaryKeyField(childObj).getDbFieldName(), true);
           from.append(getSimpleInnerJoin(entityName, parentEntity, parentEntity, childTableReferenceField, parentTableReferenceField).getJoinClause(criteronFactory));
-//          from.append(sqlConstants.getFieldsSeparator());
-//          from.append(StringUtils.wrap(parentEntityName, sqlConstants.getFieldPrefix(), sqlConstants.getFieldSuffix()));
-//          from.append(sqlConstants.getAliasSeparator());
-//          from.append(StringUtils.wrap(parentEntityName, sqlConstants.getFieldPrefix(), sqlConstants.getFieldSuffix()));
-  
-//          if(i > 0) {
-//            where.append(" ");
-//            where.append(sqlConstants.getOpAnd());
-//            where.append(" ");
-//          } // end of if
-//          where.append(ORMInfoManager.getQualifiedField(ORMInfoManager.getEntityName(parentObj), parentPK, true));
-//          where.append(" ");
-//          where.append(sqlConstants.getOpEqual());
-//          where.append(" ");
-//          where.append(ORMInfoManager.getQualifiedField(ORMInfoManager.getEntityName(childObj), ORMInfoManager.getPrimaryKeyField(childObj).getDbFieldName(), true));
           childObj = parentObj;
           Class superClass1 = ORMInfoManager.getSuperClass(childObj.getClass());
           if(superClass1 == null || Modifier.isAbstract(superClass.getModifiers()) || Object.class.getName().equals(parentObj.getClass().getName())) {
@@ -1508,13 +1479,17 @@ public abstract class AbstractDAO implements DAO {
       return sqlConstants.getQrySelectQuery().format(new Object[] {sqlConstants.getQrySelect().format(new Object[] {sqlConstants.getDistinct() + strFields.toString()}), 
           sqlConstants.getQryFrom().format(new Object[] {from.toString()}), whereClause, sortByClause, limitClause}).trim();
     } // end of if
-    groupByClause.append(strFields.toString());
-    groupByFunctions.append(functionFactory.getCriterionString(functions, true));
-    strFields.append(sqlConstants.getFieldsSeparator());
+    String groupByClauseStr = "";
+    groupByFunctions.append(functionFactory.getFunctionString(functions, true));
+    if(strFields.length() > 0) {
+      groupByClause.append(strFields.toString());
+      groupByClauseStr = sqlConstants.getQryGroupBy().format(new Object[] {groupByClause.toString()});
+      strFields.append(sqlConstants.getFieldsSeparator());
+    }
     strFields.append(groupByFunctions.toString());
     return sqlConstants.getQryGroupByQuery().format(new Object[] {sqlConstants.getQrySelect().format(new Object[] {strFields.toString()}), 
         sqlConstants.getQryFrom().format(new Object[] {from.toString()}), whereClause,
-        sqlConstants.getQryGroupBy().format(new Object[] {groupByClause.toString()}), sortByClause, limitClause}).trim();
+        groupByClauseStr, sortByClause, limitClause}).trim();
   } // end of method createSelectQuery
   
   /**
@@ -1567,7 +1542,7 @@ public abstract class AbstractDAO implements DAO {
             from.toString(), whereClause, sortByClause, limitClause}).trim();
       } // end of if
       groupByClause.append(strFields.toString());
-      groupByFunctions.append(functionFactory.getCriterionString(functions, true));
+      groupByFunctions.append(functionFactory.getFunctionString(functions, true));
       strFields.append(sqlConstants.getFieldsSeparator());
       strFields.append(groupByFunctions.toString());
       return sqlConstants.getQryGroupByQuery().format(new Object[] {sqlConstants.getQrySelect().format(new Object[] {strFields.toString()}), 
@@ -1878,9 +1853,9 @@ public abstract class AbstractDAO implements DAO {
 
   /**
    * Executes the given <code>qry</code> on the connection object taken from
-   * {@link AbstractPool} class and returns a {@link Collection} object
-   * containing the records.
-   * <p>Each record is an array of {@link String} class. First element in the
+   * {@link AbstractPool} class and returns a {@link Vector} object
+   * containing records.
+   * <p>Each record is an array of {@link Object} class. First element in the
    * returned object is array of {@link String} containing names of the columns.
    * </p>
    * 
@@ -1891,11 +1866,11 @@ public abstract class AbstractDAO implements DAO {
    * 
    * @throws ORMException In case of incorrect query or any other errors.
    */
-  public Collection<String[]> selectQueryVec(String qry, Connection con)
+  public Vector<Object[]> executeSelectQuery(String qry, Connection con)
       throws ORMException {
     
     logger.finest("Entering - Time : " + System.currentTimeMillis());
-    Vector<String[]> results = new Vector<String[]>();
+    Vector<Object[]> results = new Vector<Object[]>();
     boolean isNewConnection = false;
     Statement stmt = null;
     try {
@@ -1912,11 +1887,11 @@ public abstract class AbstractDAO implements DAO {
         fields[i] = rsmd.getColumnName(i + 1);
       } // end of for
       results.add(fields);
-      String[] values = null;
+      Object[] values = null;
       while(rst.next()) {
-        values = new String[columnCount];
+        values = new Object[columnCount];
         for(int i = 0; i < columnCount; i++) {
-          values[i] = rst.getString(i + 1);
+          values[i] = rst.getObject(i + 1);
         } // end of for
         results.add(values);
       } // end of while
@@ -1936,7 +1911,7 @@ public abstract class AbstractDAO implements DAO {
     } // end of finally
     logger.finest("Leaving - Time : " + System.currentTimeMillis());
     return results;
-  } // end of  method selectQueryVec
+  } // end of  method executeSelectQuery
   
   /**
    * {@inheritDoc}
@@ -2115,7 +2090,7 @@ public abstract class AbstractDAO implements DAO {
     return affectedObjects;
   } // end of  method executeUpdateQuery
   
-  public <T> Collection<T> executeUnionQuery(Object pojo, String[] queries, Connection con) throws SQLException {
+  public String createUnionQuery(String[] queries) {
     StringBuffer qry = new StringBuffer();
     for (int i = 0; i < queries.length; i++) {
       if(qry.toString().trim().length() > 0) {
@@ -2124,7 +2099,13 @@ public abstract class AbstractDAO implements DAO {
       qry.append(queries[i]);
     } // end of for
 
-    return (Collection<T>)this.executeQuery(qry.toString(), pojo.getClass(), pojo, con);
+    return qry.toString().trim();
+  }
+
+  public <T> Collection<T> executeUnionQuery(Object pojo, String[] queries, Connection con) throws SQLException {
+    String sql = createUnionQuery(queries);
+    logger.info(sql.toString() + ";");
+    return (Collection<T>)this.executeQuery(sql, pojo.getClass(), pojo, con);
   }
 
   protected int executeUpdate(String qry, Object pojo, Connection con)

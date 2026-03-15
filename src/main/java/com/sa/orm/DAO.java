@@ -291,81 +291,6 @@ public interface DAO {
     throws ORMException;
 
   /**
-   * Returns a {@link Collection} object containing records retrieved by
-   * executing a <code>GROUP BY</code> SQL query on the entity represented by
-   * <code>pojo</code> including parent entities.
-   * <p>Each element in the object is an array of strings. First row contains
-   * column names.</p>
-   * 
-   * @param pojo A POJO object representing a database entity.
-   * @param level Number of parent entities to be included in
-   * <code>SELECT</code> and <code>FROM</code> clause of the SQL statement.
-   * @param fields Array of strings representing database fields which are to be
-   * included in <code>SELECT</code> clause of the query.
-   * @param functions SQL cumulative functions which make the query a
-   * <code>GROUP BY</code> query.
-   * @param criteria Array of {@link SQLCriterion} child classes to define
-   * fields and their values to be compared to make the <code>WHERE</code>
-   * clause portion of the query.
-   * @param booleanOperator Database AND / OR operator used between the
-   * <code>criteria</code>.
-   * @param sortBy Name of the table field(s) by which the records are to be
-   * sorted.
-   * @param limitStart First record number that is to be retrieved. If this
-   * number is less than 1, it is not included in the SQL statement.
-   * @param limitSize Number of records to be retrieved. Number less than one
-   * means all records.
-   * @param con Connection object to be used to run the query. If
-   * <code>null</code>, a new connection is created internally.
-   * @return Collection of string arrays each having a column value as per the
-   * given <code>fields</code>. First element contains the captions, as given in
-   * fields, of the columns.
-   * @throws ORMException In case of any database errors.
-   */
-  public Collection<String[]> searchGroupBy(Object pojo, int level, String[] fields,
-      SQLFunction[] functions, SQLCriterion[] criteria, BOOLEAN_OPERATOR booleanOperator,
-      String sortBy, int limitStart, int limitSize, Connection con)
-    throws ORMException;
-
-  /**
-   * Returns a {@link Collection} object containing records retrieved by
-   * executing a <code>GROUP BY</code> SQL query on the entity represented by
-   * <code>pojo</code> including parent entities.
-   * <p>Each element in the object is an array of strings. First row contains
-   * column names.</p>
-   * 
-   * @param pojo A POJO object representing a database entity.
-   * @param level Number of parent entities to be included in
-   * <code>SELECT</code> and <code>FROM</code> clause of the SQL statement.
-   * @param fields Array of strings representing database fields which are to be
-   * included in <code>SELECT</code> clause of the query.
-   * @param functions SQL cumulative functions which make the query a
-   * <code>GROUP BY</code> query.
-   * @param criteria Array of {@link SQLCriterion} child classes to define
-   * fields and their values to be compared to make the <code>WHERE</code>
-   * clause portion of the query.
-   * @param booleanOperator Database AND / OR operator used between the
-   * <code>criteria</code>.
-   * @param sortBy Name of the table field(s) by which the records are to be
-   * sorted.
-   * @param limitStart First record number that is to be retrieved. If this
-   * number is less than 1, it is not included in the SQL statement.
-   * @param limitSize Number of records to be retrieved. Number less than one
-   * means all records.
-   * @param joins List of {@link Join} objects to be used in the query.
-   * @param con Connection object to be used to run the query. If
-   * <code>null</code>, a new connection is created internally.
-   * @return Collection of string arrays each having a column value as per the
-   * given <code>fields</code>. First element contains the captions, as given in
-   * fields, of the columns.
-   * @throws ORMException In case of any database errors.
-   */
-  public Collection<String[]> searchGroupBy(Object pojo, int level, String[] fields,
-      SQLFunction[] functions, SQLCriterion[] criteria, BOOLEAN_OPERATOR booleanOperator,
-      String sortBy, int limitStart, int limitSize, List<Join> joins, Connection con)
-    throws ORMException;
-
-  /**
    * Returns an object containing required results, if found, along with total
    * number of records which satisfy the given <code>criteria</code>.
    * 
@@ -916,7 +841,7 @@ public interface DAO {
    * @param limitSize Maximum number of records.
    * @return SQL <code>GROUP BY</code> query.
    */
-  public String createGroupByQuery(Object pojo, int level, String[] fields, 
+  public String createGroupByQuery(Object pojo, String[] fields, 
       SQLFunction[] functions, SQLCriterion[] criteria,
       BOOLEAN_OPERATOR booleanOperator, String sortBy, int limitStart, int limitSize, List<Join> joins);
   
@@ -1116,7 +1041,7 @@ public interface DAO {
    * @return Collection of string arrays containing query results.
    * @throws ORMException In case of incorrect query or any other errors.
    */
-  public Collection<String[]> selectQueryVec(String qry, Connection con)
+  public Collection<Object[]> executeSelectQuery(String qry, Connection con)
       throws ORMException;
   
   /**

@@ -3,6 +3,7 @@ package com.sa.orm.demo;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.List;
 
 import com.sa.orm.AbstractDAO;
@@ -491,6 +492,63 @@ public class DAOTest {
   }
 
   
+  public static void testGetMaxUpdatedAt() throws Exception {
+    User user = new User();
+
+    String[] fields = new String[] {"User.updatedAt"};
+    
+    // Optional: Add criteria (example: filter by userTypeId)
+    SQLCriterion[] criteria = null;
+    // Uncomment below to add a filter:
+//     criteria = new SQLCriterion[1];
+//     criteria[0] = sqlCriterionFactory.createEqualTo("userTypeId", user, 3);
+
+    // Optional: Add joins (example: join with UserCredentials)
+    List<Join> joins = null;
+    // Uncomment below to add a join:
+    /*
+    joins = new ArrayList<Join>();
+    Join join = new Join();
+    join.setJoinType(Join.JOIN_TYPE_INNER);
+    FromElement rightSide = new FromElement();
+    rightSide.setTableName("UserCredentials");
+    join.setRightSide(rightSide);
+    SQLCriterion[] onCriteria = new SQLCriterion[1];
+    onCriteria[0] = sqlCriterionFactory.createColumnComparison(
+        "id", "User",
+        SQLCriterion.EQUAL_TO,
+        "userId", "UserCredentials");
+    join.setOnCriteria(onCriteria);
+    join.setOnCriteriaOperator(BOOLEAN_OPERATOR.AND);
+    joins.add(join);
+    */
+
+    // Add a filter on the joined table (example: username = 'amirabbas')
+    // Uncomment below to add a filter on joined table:
+//     criteria = new SQLCriterion[1];
+//     criteria[0] = sqlCriterionFactory.createEqualTo("username", "UserCredentials", "amirabbas", SQLCriterionFactory.STRING);
+
+    // Create MAX function for updatedAt field
+    SQLFunction[] functions = {
+        sqlFunctionFactory.createCount("User.id", "IdCount")
+        //, sqlFunctionFactory.createMax("User.updatedAt", "MaxUpdatedAt")
+    };
+
+    Collection<Object[]> results = daoObj.searchGroupBy(user, fields, functions, 
+        criteria, BOOLEAN_OPERATOR.AND, null, -1, -1, joins, null);
+
+    if (results != null && !results.isEmpty()) {
+      Iterator iterator = results.iterator();
+      while(iterator.hasNext()) {
+        Object[] objects = (Object[]) iterator.next();
+        System.out.println(Arrays.toString(objects));
+      }
+    }
+    else {
+      System.out.println("No results returned.");
+    }
+  } // end of method testGetMaxUpdatedAt
+
   public static void testColumnComparison() {
     try {
       System.out.println("Testing Column Comparison...");
@@ -603,8 +661,9 @@ public class DAOTest {
 //      testSearchWithJoins();
 //      testColumnComparison();
       testExecuteUnionQuery();
+      // testGetMaxUpdatedAt();
 //
-      join();
+      //join();
     }
     catch(Exception e) {
       if(e instanceof ORMException) {

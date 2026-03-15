@@ -69,8 +69,8 @@ public class SQLFunction implements SQLCriterion {
    * @return String to be used as part of an SQL query.
    */
   public String getCriterionString() {
-    return getCriterionString(false);
-  } // end of method getCriterionString
+    return getFunctionString(false);
+  } // end of method getFunctionString
   
   /**
    * Returns a string that can be used in an SQL query representing a
@@ -79,12 +79,12 @@ public class SQLFunction implements SQLCriterion {
    * the returned string.
    * @return String to be used as part of an SQL query.
    */
-  public String getCriterionString(boolean includeAlias) {
+  public String getFunctionString(boolean includeAlias) {
     String sql = function + "(" + StringUtils.stringArrayToString(params, ", ") + ")";
     if(includeAlias && alias != null && alias.trim().length() > 0) {
       sql += " " + alias;
     } // end of if
     return sql;
-  } // end of method getCriterionString
+  } // end of method getFunctionString
   
 } // end of interface SQLFunction

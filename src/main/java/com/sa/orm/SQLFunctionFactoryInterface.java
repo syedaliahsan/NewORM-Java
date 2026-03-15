@@ -139,6 +139,6 @@ public interface SQLFunctionFactoryInterface {
    * @param functions Object whose SQL is to be returned.
    * @return String to be used as part of an SQL query.
    */
-  public String getCriterionString(SQLFunction[] functions, boolean includeAlias);
+  public String getFunctionString(SQLFunction[] functions, boolean includeAlias);
   
 } // end of interface SQLFunction

@@ -188,16 +188,16 @@ public abstract class SQLFunctionFactory implements SQLFunctionFactoryInterface 
    * @param functions Object whose SQL is to be returned.
    * @return String to be used as part of an SQL query.
    */
-  public String getCriterionString(com.sa.orm.SQLFunction[] functions, boolean includeAlias) {
+  public String getFunctionString(SQLFunction[] functions, boolean includeAlias) {
     if(functions == null || functions.length < 1) {
       return "";
     } // end of if
-    StringBuffer sb = new StringBuffer(functions[0].getCriterionString(includeAlias));
+    StringBuffer sb = new StringBuffer(functions[0].getFunctionString(includeAlias));
     for (int i = 1; i < functions.length; i++) {
       sb.append(", ");
-      sb.append(functions[i].getCriterionString(includeAlias));
+      sb.append(functions[i].getFunctionString(includeAlias));
     } // end of for
     return sb.toString();
-  } // end of method getCriterionString
+  } // end of method getFunctionString
   
 } // end of class SQLFunctionFactory
