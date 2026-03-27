@@ -123,6 +123,7 @@ public class ConnectionPool extends AbstractPool {
    */
   public void returnConnection(Connection con) {
     try {
+      con.setAutoCommit(true);
       con.close();
     } // end of try
     catch (SQLException se) {

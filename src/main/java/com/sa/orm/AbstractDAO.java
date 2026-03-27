@@ -128,7 +128,13 @@ public abstract class AbstractDAO implements DAO {
    */
   public <T> T getById(T pojo, Connection con)
       throws ORMException {
-    return fillObject(pojo, con);
+    Object pkValue = ORMInfoManager.getPrimaryKeyValue(pojo);
+    if (pkValue == null || (pkValue.getClass() == Integer.class && ((Integer)pkValue).intValue() < 1) || (pkValue.getClass() == String.class && ((String)pkValue).trim().equals(""))) {
+      throw new ORMException("Instance member " + ORMInfoManager.getPrimaryKeyName(pojo) + " must be set in order to get the object.");
+    }
+    T newObj = (T)ORMInfoManager.instantiate(pojo.getClass().getName());
+    ORMInfoManager.setPrimaryKeyValue(newObj, pkValue);
+    return fillObject(newObj, con);
   } // end of method get
 
   /**
@@ -168,8 +174,9 @@ public abstract class AbstractDAO implements DAO {
    */
   public <T> T getById(T pojo, Object pkValue, Connection con)
       throws ORMException {
-    ORMInfoManager.setPrimaryKeyValue(pojo, pkValue);
-    return fillObject(pojo, con);
+    T newObj = (T)ORMInfoManager.instantiate(pojo.getClass().getName());
+    ORMInfoManager.setPrimaryKeyValue(newObj, pkValue);
+    return fillObject(newObj, con);
   } // end of method get
 
   /**
@@ -655,6 +662,11 @@ public abstract class AbstractDAO implements DAO {
   }
   
   public <T> T getFirstByAttributes(T pojo, String[] fields,
+      Collection<NameValueVO> attributeValues, Connection con) throws ORMException {
+    return getFirstByAttributes(pojo, fields, attributeValues, null, -1, -1, con);
+  } // end of method searchPaging
+
+  public <T> T getFirstByAttributes(T pojo, String[] fields,
       Collection<NameValueVO> attributeValues, String sortBy,
       int limitStart, int limitSize, Connection con) throws ORMException {
     PagingVO pagingVO = searchByAttributes(pojo, fields, attributeValues, sortBy, limitStart, limitSize, con);
@@ -1021,7 +1033,7 @@ public abstract class AbstractDAO implements DAO {
   public <T> DbResult<T> delete(T pojo, Object pkValue, Connection con, boolean returnDeletedObject) 
       throws ORMException {
     Collection ids = Arrays.asList(new Object[] {pkValue});
-    return delete((T)pojo, ids, con, returnDeletedObject);
+    return delete(pojo, ids, con, returnDeletedObject);
   } // end of method delete
   
   /**
@@ -2004,7 +2016,6 @@ public abstract class AbstractDAO implements DAO {
       try {
         value = rst.getObject(instanceMember.getInstanceMemberName());
         Utility.invokeMethod(pojo, instanceMember.getSetterMethod(), new Object[] {value});
-        //instanceMember.getSetterMethod().invoke(pojo, new Object[] {value});
       } catch(Exception eee) {
         logger.warning("Could not set value [" + instanceMember.getInstanceMemberName() + " : " + value + "] in [" + instanceMember.getSetterMethod().getName() + "] method in [" + pojo.getClass().getName() + "] object.");
         StackTraceElement rootCause = eee.getStackTrace()[eee.getStackTrace().length - 1];
