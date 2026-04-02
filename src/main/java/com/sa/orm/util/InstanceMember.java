@@ -118,8 +118,10 @@ public class InstanceMember {
     String setterName = "set" + StringUtils.firstLetterCapital(this.getInstanceMemberName());
     try {
       setterMethod = pojo.getClass().getMethod(setterName, new Class[] {field.getType()});
-    } catch(NoSuchMethodException nsme) {
-      ;
+    }
+    catch(NoSuchMethodException nsme) {
+      logger.severe(nsme.getMessage());
+      nsme.printStackTrace();
     }
     return setterMethod;
   }

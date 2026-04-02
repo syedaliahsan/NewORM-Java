@@ -131,12 +131,18 @@ public class DAOImpl extends AbstractDAO {
       boolean returnAffectedObject, boolean insertContainedParentObjects,
       boolean insertContainedChildObjects) throws ORMException {
 
-    T insertedObj = (T)ORMInfoManager.instantiate(pojo.getClass().getName());
+    boolean isNewConnection = false;
+    T insertedObj = (T)ORMInfoManager.instantiate(clazz.getName());
     DbResult<T> resultObj = null;
     Object previousPKValue = ORMInfoManager.getPrimaryKeyValue(pojo);
     Object pkValue = previousPKValue;
 
     try{
+      if(con == null || con.isClosed()) {
+        con = getConnection();
+        con.setAutoCommit(false);
+        isNewConnection = true;
+      }
       // contained parent objects
       if(insertContainedParentObjects) {
         insertContainedParentObjects(clazz, pojo, insertedObj, con, insertContainedParentObjects, insertContainedChildObjects);
@@ -161,11 +167,15 @@ public class DAOImpl extends AbstractDAO {
       logger.finer("About to insert [" + clazz.getName() + "] object with primary key field value [" + pkValue + "].");
       String sql = createInsertQuery(clazz, pojo);
       logger.info(sql + ";");
-      int affectedCount = this.executeUpdate(sql, pojo, con);
-      if(returnAffectedObject) {
-        resultObj = new DbResult<T>(this.executeUpdate(sql, pojo, con));
+      if(returnAffectedObject || insertContainedChildObjects) {
+        resultObj = new DbResult<T>((Collection<T>)this.executeQuery(sql, clazz, pojo, con));
+        logger.info("ResultObject has " + resultObj.getEntities().size() + " records");
+        insertedObj = resultObj.hasEntities() ? (T)resultObj.getEntities().toArray()[0] : insertedObj;
+        pkValue = ORMInfoManager.getPrimaryKeyValue(insertedObj);
+        logger.info("Id of the ResultObject is " + pkValue);
       }
       else {
+        int affectedCount = this.executeUpdate(sql, pojo, con);
         resultObj = new DbResult<T>(affectedCount);
       }
       logger.finer("Inserted [" + clazz.getName() + "] object with primary key field value [" + pkValue + "] successfully.");
@@ -174,9 +184,27 @@ public class DAOImpl extends AbstractDAO {
       if(insertContainedChildObjects) {
         insertContainedChildObjects(clazz, pojo, insertedObj, con, insertContainedParentObjects, insertContainedChildObjects);
       }
-   
-    } catch(SQLException sqle) {
+      
+      if(isNewConnection) {
+        try {
+          con.commit();
+        } catch(Exception ee) {}
+      }
+    }
+    catch(SQLException sqle) {
+      if(isNewConnection) {
+        try {
+          con.rollback();
+        } catch(Exception ee) {}
+      }
       throw exceptionUtil.getInsertException(sqle.getMessage(), sqle);
+    }
+    finally {
+      if(isNewConnection) {
+        try {
+          con.close();
+        } catch(Exception ee) {}
+      }
     }
     return resultObj;
   } // end of method insertTest

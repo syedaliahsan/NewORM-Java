@@ -756,6 +756,8 @@ public abstract class AbstractDAO implements DAO {
       boolean insertContainedChildObjects) throws ORMException {
     
     Collection<ContainedObjectField> containedObjFields = ORMInfoManager.getContainedObjectFields(parentClass);
+    if(containedObjFields == null) return;
+    
     for (ContainedObjectField containedObjField : containedObjFields) {
       if(containedObjField.getRelationshipWithContainedObject() != AnnotationConstants.RELATIONSHIP_PARENT) {
         continue;
@@ -809,6 +811,8 @@ public abstract class AbstractDAO implements DAO {
     logger.finer("About to insert contained objects for [" + clazz.getName()
         + "] object with primary key value [" + parentPKValue + "].");
     Collection<ContainedObjectField> containedObjFields = ORMInfoManager.getContainedObjectFields(clazz);
+    if(containedObjFields == null) return;
+    
     for (ContainedObjectField containedObjField : containedObjFields) {
       if (containedObjField.getRelationshipWithContainedObject() != AnnotationConstants.RELATIONSHIP_CHILD) {
         continue;

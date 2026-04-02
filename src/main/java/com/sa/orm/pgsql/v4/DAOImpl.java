@@ -188,7 +188,7 @@ public class DAOImpl extends AbstractDAO {
       boolean insertContainedChildObjects) throws ORMException {
 
     boolean isNewConnection = false;
-    T insertedObj = (T)ORMInfoManager.instantiate(pojo.getClass().getName());
+    T insertedObj = (T)ORMInfoManager.instantiate(clazz.getName());
     DbResult<T> resultObj = null;
     Object previousPKValue = ORMInfoManager.getPrimaryKeyValue(pojo);
     Object pkValue = previousPKValue;
@@ -228,6 +228,7 @@ public class DAOImpl extends AbstractDAO {
         logger.info("ResultObject has " + resultObj.getEntities().size() + " records");
         insertedObj = resultObj.hasEntities() ? (T)resultObj.getEntities().toArray()[0] : insertedObj;
         pkValue = ORMInfoManager.getPrimaryKeyValue(insertedObj);
+        logger.info("Id of the ResultObject is " + pkValue);
       }
       else {
         int affectedCount = this.executeUpdate(sql, pojo, con);

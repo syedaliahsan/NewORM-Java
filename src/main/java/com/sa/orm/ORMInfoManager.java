@@ -778,7 +778,8 @@ public class ORMInfoManager {
   protected static Object get(String pojoName, String key) {
     Map<String, Object> pojoMap = map.get(pojoName);
     if(pojoMap == null) {
-      return null;
+      introspect(instantiate(pojoName));
+      pojoMap = map.get(pojoName);
     } // end of if
     return pojoMap.get(key);
   } // end of method get
