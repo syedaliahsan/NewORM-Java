@@ -79,6 +79,8 @@ public class SQLCriterionFactory {
    */
   public static final int COLUMN = 10;
 
+  public static final int BOOLEAN = 11;
+  
   protected SQLCriterionFactory() {
   }
 
@@ -95,6 +97,7 @@ public class SQLCriterionFactory {
     if ("java.lang.Timestamp".equals(className)) return TIME_STAMP;
     if ("java.lang.Clob".equals(className)) return CLOB;
     if ("java.lang.Blob".equals(className)) return BLOB;
+    if ("java.lang.Boolean".equals(className) || boolean.class.getName().equals(className)) return BOOLEAN;
     return OBJECT;
   }
   
@@ -112,6 +115,7 @@ public class SQLCriterionFactory {
      if (value instanceof Timestamp) return TIME_STAMP;
      if (value instanceof Clob) return CLOB;
      if (value instanceof Blob) return BLOB;
+     if (value instanceof Boolean) return BOOLEAN;
      return OBJECT;
   }
 
@@ -142,6 +146,7 @@ public class SQLCriterionFactory {
       return new SQLStringCriterion(SQLCriterion.NULL, fieldName, tableName, null);
     }
     switch(fieldType) {
+      case BOOLEAN: return new SQLBooleanCriterion(SQLCriterion.EQUAL_TO, fieldName, tableName, new Boolean[] {(Boolean)value}, compareNull);
       case INT: return new SQLIntCriterion(SQLCriterion.EQUAL_TO, fieldName, tableName, new Integer[] {(Integer)value}, compareNull);
       case LONG: return new SQLLongCriterion(SQLCriterion.EQUAL_TO, fieldName, tableName, new Long[] {(Long)value}, compareNull);
       case FLOAT: return new SQLFloatCriterion(SQLCriterion.EQUAL_TO, fieldName, tableName, new Float[] {(Float)value}, compareNull);
@@ -304,6 +309,14 @@ public class SQLCriterionFactory {
     }
   }
 
+  public SQLCriterion createLessThan(String fieldName, Object value) {
+    return createLessThan(fieldName, value, getType(value));
+  }
+
+  public SQLCriterion createLessThan(String fieldName, Object value, int fieldType) {
+    return createLessThan(fieldName, (String)null, value, fieldType);
+  }
+
   public SQLCriterion createLessThan(String fieldName, String tableName, Object value, int fieldType) {
     return createLessThan(fieldName, tableName, value, fieldType, null, null);
   }
@@ -322,6 +335,14 @@ public class SQLCriterionFactory {
       case TIME_STAMP: return createTimeStampCriterion(SQLCriterion.LESS_THAN, fieldName, tableName, new Timestamp[] {(Timestamp)value}, dbMask, javaMask, compareNull);
       default: return null;
     }
+  }
+
+  public SQLCriterion createLessThanEqualTo(String fieldName, Object value) {
+    return createLessThanEqualTo(fieldName, value, getType(value));
+  }
+
+  public SQLCriterion createLessThanEqualTo(String fieldName, Object value, int fieldType) {
+    return createLessThanEqualTo(fieldName, (String)null, value, fieldType);
   }
 
   public SQLCriterion createLessThanEqualTo(String fieldName, String tableName, Object value, int fieldType) {
@@ -344,6 +365,14 @@ public class SQLCriterionFactory {
     }
   }
 
+  public SQLCriterion createGreaterThan(String fieldName, Object value) {
+    return createGreaterThan(fieldName, value, getType(value));
+  }
+
+  public SQLCriterion createGreaterThan(String fieldName, Object value, int fieldType) {
+    return createGreaterThan(fieldName, (String)null, value, fieldType);
+  }
+
   public SQLCriterion createGreaterThan(String fieldName, String tableName, Object value, int fieldType) {
     return createGreaterThan(fieldName, tableName, value, fieldType, null, null);
   }
@@ -362,6 +391,14 @@ public class SQLCriterionFactory {
       case TIME_STAMP: return createTimeStampCriterion(SQLCriterion.GREATER_THAN, fieldName, tableName, new Timestamp[] {(Timestamp)value}, dbMask, javaMask, compareNull);
       default: return null;
     }
+  }
+
+  public SQLCriterion createGreaterThanEqualTo(String fieldName, Object value) {
+    return createGreaterThanEqualTo(fieldName, value, getType(value));
+  }
+
+  public SQLCriterion createGreaterThanEqualTo(String fieldName, Object value, int fieldType) {
+    return createGreaterThanEqualTo(fieldName, (String)null, value, fieldType);
   }
 
   public SQLCriterion createGreaterThanEqualTo(String fieldName, String tableName, Object value, int fieldType) {

@@ -29,6 +29,7 @@ public class SQLCriterionFactoryImpl extends SQLCriterionFactory {
   @Override
   public SQLCriterion createEqualTo(String fieldName, String tableName, Object value, int fieldType, String dbMask, String javaMask, boolean compareNull) {
     switch(fieldType) {
+      case BOOLEAN: return new SQLBooleanCriterion(SQLCriterion.EQUAL_TO, fieldName, tableName, new Boolean[] {(Boolean)value}, compareNull);
       case INT: return new SQLIntCriterion(SQLCriterion.EQUAL_TO, fieldName, tableName, new Integer[] {(Integer)value}, compareNull);
       case FLOAT: return new SQLFloatCriterion(SQLCriterion.EQUAL_TO, fieldName, tableName, new Float[] {(Float)value}, compareNull);
       case STRING: return new SQLStringCriterion(SQLCriterion.EQUAL_TO, fieldName, tableName, new String[] {value.toString()}, compareNull);
@@ -40,6 +41,7 @@ public class SQLCriterionFactoryImpl extends SQLCriterionFactory {
   @Override
   public SQLCriterion createNotEqualTo(String fieldName, String tableName, Object value, int fieldType, String dbMask, String javaMask, boolean compareNull) {
     switch(fieldType) {
+      case BOOLEAN: return new SQLBooleanCriterion(SQLCriterion.NOT_EQUAL_TO, fieldName, tableName, new Boolean[] {(Boolean)value}, compareNull);
       case INT: return new SQLIntCriterion(SQLCriterion.NOT_EQUAL_TO, fieldName, tableName, new Integer[] {(Integer)value}, compareNull);
       case FLOAT: return new SQLFloatCriterion(SQLCriterion.NOT_EQUAL_TO, fieldName, tableName, new Float[] {(Float)value}, compareNull);
       case STRING: return new SQLStringCriterion(SQLCriterion.NOT_EQUAL_TO, fieldName, tableName, new String[] {value.toString()}, compareNull);
@@ -53,6 +55,10 @@ public class SQLCriterionFactoryImpl extends SQLCriterionFactory {
      if (values == null) return null;
      Object[] arr = values.toArray();
      switch(fieldType) {
+       case BOOLEAN: 
+         Boolean[] booleanArr = new Boolean[arr.length];
+         for(int i=0; i<arr.length; i++) booleanArr[i] = (Boolean)arr[i];
+         return new SQLBooleanCriterion(SQLCriterion.IN, fieldName, tableName, booleanArr, compareNull);
       case INT: 
           Integer[] intArr = new Integer[arr.length];
           for(int i=0; i<arr.length; i++) intArr[i] = (Integer)arr[i];
@@ -78,6 +84,10 @@ public class SQLCriterionFactoryImpl extends SQLCriterionFactory {
      if (values == null) return null;
      Object[] arr = values.toArray();
      switch(fieldType) {
+       case BOOLEAN: 
+         Boolean[] booleanArr = new Boolean[arr.length];
+         for(int i=0; i<arr.length; i++) booleanArr[i] = (Boolean)arr[i];
+         return new SQLBooleanCriterion(SQLCriterion.NOT_IN, fieldName, tableName, booleanArr, compareNull);
       case INT: 
           Integer[] intArr = new Integer[arr.length];
           for(int i=0; i<arr.length; i++) intArr[i] = (Integer)arr[i];
@@ -100,6 +110,7 @@ public class SQLCriterionFactoryImpl extends SQLCriterionFactory {
 
   public SQLCriterion createNull(String fieldName, String tableName, int fieldType) {
     switch(fieldType) {
+      case BOOLEAN: return new SQLBooleanCriterion(SQLCriterion.NULL, fieldName, tableName, null, false);
       case INT: return new SQLIntCriterion(SQLCriterion.NULL, fieldName, tableName, null, false);
       case FLOAT: return new SQLFloatCriterion(SQLCriterion.NULL, fieldName, tableName, null, false);
       case STRING: return new SQLStringCriterion(SQLCriterion.NULL, fieldName, tableName, null, false);
@@ -111,6 +122,7 @@ public class SQLCriterionFactoryImpl extends SQLCriterionFactory {
   @Override
   public SQLCriterion createNotNull(String fieldName, String tableName, int fieldType) {
     switch(fieldType) {
+      case BOOLEAN: return new SQLBooleanCriterion(SQLCriterion.NOT_NULL, fieldName, tableName, null, false);
       case INT: return new SQLIntCriterion(SQLCriterion.NOT_NULL, fieldName, tableName, null, false);
       case FLOAT: return new SQLFloatCriterion(SQLCriterion.NOT_NULL, fieldName, tableName, null, false);
       case STRING: return new SQLStringCriterion(SQLCriterion.NOT_NULL, fieldName, tableName, null, false);

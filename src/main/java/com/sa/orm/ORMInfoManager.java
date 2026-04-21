@@ -111,6 +111,10 @@ public class ORMInfoManager {
 
   private static final String ENUM_INHERITS = "Inherits";
 
+  private static final String ENUM_INHERITED_ATTRIBUTES = "InheritedAttributes";
+
+  private static final String ENUM_INHERIT_PK = "InheritPK";
+
   private static final String ENUM_PRIMARY_KEY = "PK";
 
   private static final String ENUM_QUALIFIED_PRIMARY_KEY = "QualPK";
@@ -394,12 +398,12 @@ public class ORMInfoManager {
 
   /**
    * Returns super class of the given <code>clazz</code> if it inherits another
-   * database object.
+   * database entity.
    * <p>It is checked if <code>inherits</code> field of annotation
    * {@link Entity} has a non-empty value.</p>
-   * 
+   *
    * @param clazz {@link Class} whose parent class is to be returned.
-   * 
+   *
    * @return Super class of the given <code>clazz</code> if it inherits another
    * database entity or <code>null</code>.
    */
@@ -408,7 +412,12 @@ public class ORMInfoManager {
     if(inherits == null || inherits.trim().length() < 1) {
       return null;
     } // end of if
-    return clazz.getSuperclass();
+    try {
+      return Class.forName(inherits);
+    } catch(ClassNotFoundException e) {
+      logger.warning("Super class not found: " + inherits);
+      return null;
+    }
   } // end of method getSuperClass
 
   /**
@@ -416,9 +425,9 @@ public class ORMInfoManager {
    * database object.
    * <p>It is checked if <code>inherits</code> field of annotation
    * {@link Entity} has a non-empty value.</p>
-   * 
+   *
    * @param pojo Object whose parent class is to be returned.
-   * 
+   *
    * @return Super class of the given <code>pojo</code> if it inherits another
    * database entity or <code>null</code>.
    */
@@ -427,7 +436,12 @@ public class ORMInfoManager {
     if(inherits == null || inherits.trim().length() < 1) {
       return null;
     } // end of if
-    return pojo.getClass().getSuperclass();
+    try {
+      return Class.forName(inherits);
+    } catch(ClassNotFoundException e) {
+      logger.warning("Super class not found: " + inherits);
+      return null;
+    }
   } // end of method getSuperClass
 
   /**
@@ -456,11 +470,11 @@ public class ORMInfoManager {
    * <p>If <code>copyFields</code> is <code>true</code>, field values from
    * <code>pojo</code> are copied to the returned super class object before
    * returning.</p>
-   * 
+   *
    * @param pojo Object whose parent super is to be returned.
    * @param copyFields Whether or not to copy field values from given
    * <code>pojo</code> to returned super class object.
-   * 
+   *
    * @return Super object of the given <code>pojo</code> if it inherits
    * another database entity or <code>null</code>.
    */
@@ -471,7 +485,7 @@ public class ORMInfoManager {
       return null;
     } // end of if
     try {
-      superClassObj = instantiate(pojo.getClass().getSuperclass().getName());
+      superClassObj = instantiate(inherits);
     } catch (Exception ee) {}
     if(superClassObj != null && superClassObj.getClass().getName().equals(Object.class.getName()) == false) {
       if(copyFields) {
@@ -481,6 +495,31 @@ public class ORMInfoManager {
     } // end of if
     return superClassObj;
   } // end of method getSuperClassObject
+
+  /**
+   * Returns the inherited attributes from the parent entity for the given
+   * <code>pojo</code>.
+   *
+   * @param pojo Object whose inherited attributes are to be returned.
+   *
+   * @return Array of inherited attribute names, or null if none.
+   */
+  public static String[] getInheritedAttributes(Object pojo) {
+    return (String[])get(pojo, ENUM_INHERITED_ATTRIBUTES);
+  } // end of method getInheritedAttributes
+
+  /**
+   * Returns whether the given <code>pojo</code> inherits the primary key
+   * from its parent entity.
+   *
+   * @param pojo Object whose inheritPK setting is to be returned.
+   *
+   * @return true if the primary key is inherited, false otherwise.
+   */
+  public static boolean isInheritPK(Object pojo) {
+    Boolean inheritPK = (Boolean)get(pojo, ENUM_INHERIT_PK);
+    return inheritPK != null && inheritPK.booleanValue();
+  } // end of method isInheritPK
 
   /**
    * Returns {@link Collection} of {@link ContainedObjectField} objects which
@@ -865,12 +904,20 @@ public class ORMInfoManager {
     logger.finer("Introspecting class " + pojo.getClass().getName());
     String entityName = pojo.getClass().getSimpleName();
     String inherits = null;
+    Class inheritsClass = null;
+    String[] inheritedAttributes = null;
+    boolean inheritPK = false;
     Entity annoEntity = pojo.getClass().getAnnotation(Entity.class);
     if(annoEntity != null) {
       if(annoEntity.name() != null && annoEntity.name().trim().length() > 0) {
         entityName = annoEntity.name();
       }
-      inherits = annoEntity.inherits();
+      inheritsClass = annoEntity.inherits();
+      if(inheritsClass != null && inheritsClass.equals(Object.class) == false) {
+        inherits = inheritsClass.getName();
+      }
+      inheritedAttributes = annoEntity.inheritedAttributes();
+      inheritPK = annoEntity.inheritPK();
     } // end of if
     
     
@@ -934,7 +981,7 @@ public class ORMInfoManager {
           dbField = new DBField(pojo, fd, entityName, columnName);
         }
         dbField.setConstraintName(annoPK.constraintName());
-        
+
         primaryKey = dbField;
       } // end of if
       if(annoUnique != null) {
@@ -946,7 +993,22 @@ public class ORMInfoManager {
         }
       }
       if(annoFK != null) {
-        dbField = new ForeignKeyField(pojo, fd, entityName, columnName, annoFK.referenceEntity(), annoFK.referencedField());
+        // If dbField already exists (e.g., from @PrimaryKey), convert it to ForeignKeyField
+        if(dbField != null) {
+          String oldDbFieldName = dbField.getDbFieldName();
+          String oldConstraintName = dbField.getConstraintName();
+          dbField = new ForeignKeyField(pojo, fd, entityName, oldDbFieldName, annoFK.referenceEntity(), annoFK.referencedField());
+          // Preserve constraint name if it was set by @PrimaryKey or @Unique
+          if(oldConstraintName != null) {
+            dbField.setConstraintName(oldConstraintName);
+          }
+          // If this field was marked as primary key, update primaryKey reference to the new ForeignKeyField
+          if(primaryKey != null && primaryKey.getDbFieldName().equals(oldDbFieldName)) {
+            primaryKey = dbField;
+          }
+        } else {
+          dbField = new ForeignKeyField(pojo, fd, entityName, columnName, annoFK.referenceEntity(), annoFK.referencedField());
+        }
         if(annoFK.constraintName() != null && annoFK.constraintName().trim().length() > 0) {
           dbField.setConstraintName(annoFK.constraintName());
         } // end of if
@@ -957,6 +1019,82 @@ public class ORMInfoManager {
       instanceMembers.add(dbField);
       dbFields.add(dbField);
     } // end of for
+
+    // Handle inheritance: include inherited PK and inherited attributes
+    if(inheritsClass != null && inheritsClass.equals(Object.class) == false) {
+      try {
+        Object parentObj = instantiate(inheritsClass.getName());
+        if(parentObj != null) {
+          // Ensure parent is introspected first
+          if(map.containsKey(inheritsClass.getName()) == false) {
+            introspect(parentObj);
+          }
+
+          // Include inherited primary key if inheritPK is true
+          if(inheritPK) {
+            DBField parentPKField = getPrimaryKeyField(parentObj);
+            if(parentPKField != null) {
+              // Create a ForeignKeyField for the inherited PK
+              ForeignKeyField inheritedPKField = new ForeignKeyField(
+                  pojo,
+                  parentPKField.getField(),
+                  entityName,
+                  parentPKField.getDbFieldName(),
+                  parentPKField.getEntityName(),
+                  parentPKField.getDbFieldName()
+              );
+              // Add to the beginning of the lists
+              dbFields.add(0, inheritedPKField);
+              instanceMembers.add(0, inheritedPKField);
+              map1.put(INSTANCE_MEMBER_NAME_KEY_PREFIX + inheritedPKField.getInstanceMemberName(), inheritedPKField);
+              map1.put(COLUMN_NAME_KEY_PREFIX + inheritedPKField.getDbFieldName(), inheritedPKField);
+              foreignKeys.add(inheritedPKField);
+              // Set the inherited PK as the primary key for this entity
+              primaryKey = inheritedPKField;
+              logger.finer("Added inherited PK [" + inheritedPKField.getInstanceMemberName() + "] to [" + pojo.getClass().getName() + "]");
+            } else {
+              logger.warning("Parent class [" + inheritsClass.getName() + "] does not have a primary key defined. inheritPK=true will not work correctly.");
+            }
+          }
+
+          // Include inherited attributes
+          if(inheritedAttributes != null && inheritedAttributes.length > 0) {
+            List<DBField> parentFields = getFields(parentObj);
+            for(String attrName : inheritedAttributes) {
+              for(DBField parentField : parentFields) {
+                if(parentField.getInstanceMemberName().equals(attrName)) {
+                  // Check if this field is not already in the child's fields
+                  boolean alreadyExists = false;
+                  for(DBField existingField : dbFields) {
+                    if(existingField.getInstanceMemberName().equals(attrName)) {
+                      alreadyExists = true;
+                      break;
+                    }
+                  }
+                  if(!alreadyExists) {
+                    // Create a new DBField for the inherited attribute
+                    DBField inheritedField = new DBField(
+                        pojo,
+                        parentField.getField(),
+                        entityName,
+                        parentField.getDbFieldName()
+                    );
+                    dbFields.add(inheritedField);
+                    instanceMembers.add(inheritedField);
+                    map1.put(INSTANCE_MEMBER_NAME_KEY_PREFIX + inheritedField.getInstanceMemberName(), inheritedField);
+                    map1.put(COLUMN_NAME_KEY_PREFIX + inheritedField.getDbFieldName(), inheritedField);
+                    logger.finer("Added inherited attribute [" + inheritedField.getInstanceMemberName() + "] to [" + pojo.getClass().getName() + "]");
+                  }
+                  break;
+                }
+              }
+            }
+          }
+        }
+      } catch(Exception e) {
+        logger.warning("Error processing inheritance for [" + pojo.getClass().getName() + "]: " + e.getMessage());
+      }
+    } // end of if inheritance
 
     StringBuilder plainFieldNames = new StringBuilder();
     StringBuilder wrappedFieldNames = new StringBuilder();
@@ -991,9 +1129,19 @@ public class ORMInfoManager {
     
     map1.put(ENUM_ENTITY_NAME, entityName);
     map1.put(ENUM_INHERITS, inherits);
+    map1.put(ENUM_INHERITED_ATTRIBUTES, inheritedAttributes);
+    map1.put(ENUM_INHERIT_PK, inheritPK);
     map1.put(ENUM_PRIMARY_KEY, primaryKey);
-    map1.put(ENUM_QUALIFIED_PRIMARY_KEY, entityName + sqlConstantsObj.getQualifierSeparator() + primaryKey.getDbFieldName());
-    map1.put(ENUM_QUALIFIED_PRIMARY_KEY_ALIAS, entityName + sqlConstantsObj.getQualifierSeparatorReplaced() + primaryKey.getDbFieldName());
+    
+    // Handle null primaryKey - this should not happen for entities with @PrimaryKey
+    if(primaryKey == null && dbFields.isEmpty() == false) {
+      logger.warning("Primary key is null for entity [" + entityName + "]. This may cause issues.");
+    }
+    
+    if(primaryKey != null) {
+      map1.put(ENUM_QUALIFIED_PRIMARY_KEY, entityName + sqlConstantsObj.getQualifierSeparator() + primaryKey.getDbFieldName());
+      map1.put(ENUM_QUALIFIED_PRIMARY_KEY_ALIAS, entityName + sqlConstantsObj.getQualifierSeparatorReplaced() + primaryKey.getDbFieldName());
+    }
     map1.put(ENUM_DB_FIELDS, dbFields);
     map1.put(ENUM_INSTANCE_MEMBERS, instanceMembers);
     map1.put(ENUM_FOREIGN_KEY_FIELDS, foreignKeys);
@@ -1093,27 +1241,22 @@ public class ORMInfoManager {
     return ids;
   } // end of method getIds
   
-  /*
-  private static String getQualifiedFieldAlias(String entityName, Object pojo, String fieldName) {
-    StringBuffer sb = new StringBuffer();
-    sb.append(entityName);
-    sb.append(sqlConstantsObj.getQUALIFIER_SEPARATOR_REPLACED);
-    sb.append(fieldName);
-    return sb.toString();
-  } // end of method getQualifiedFieldAlias
-  
-  private static String getAliasedField(Object pojo, String fieldName, boolean wrap) {
-    StringBuffer sb = new StringBuffer();
-    if(wrap) {
-      fieldName = StringUtils.wrap(fieldName, sqlConstantsObj.getFIELD_PREFIX, sqlConstantsObj.getFIELD_SUFFIX);
+  public static List getFieldValues(Object[] objs, DBField field) {
+    if(objs == null) {
+      return null;
     } // end of if
-    sb.append(fieldName);
-    sb.append(sqlConstantsObj.getALIAS_SEPARATOR);
-    sb.append(fieldName);
-    return sb.toString();
-  } // end of method getQualifiedField
+    
+    List ids = new ArrayList();
+    if(objs.length < 1) {
+      return ids;
+    } // end of if
+    
+    for (int i = 0; i < objs.length; i++) {
+      ids.add(Utility.invokeMethod(objs[i], field.getGetterMethod()));
+    } // end of for
+    return ids;
+  } // end of method getIds
   
-  */
   public static String getQualifiedField(String entityName, String fieldName, boolean wrap) {
     StringBuffer sb = new StringBuffer();
     String wrapperPrefix = wrap ? sqlConstantsObj.getFieldPrefix() : "";

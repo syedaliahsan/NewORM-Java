@@ -23,7 +23,6 @@ public class PagingVO implements java.io.Serializable {
   private int rowsPerPage = MAX_RECORDS_SHOWN;
   private int totalRows;
   private String sortBy;
-  private String sortOrder;
   private int numberOfPagesToShow = MAX_RECORDS_SHOWN;
   
   private long totalPages = 0;
@@ -249,20 +248,6 @@ public class PagingVO implements java.io.Serializable {
   } // end of method setSortBy
   
   /**
-   * @return the sortOrder
-   */
-  public String getSortOrder() {
-    return sortOrder;
-  } // end of method getSortOrder
-  
-  /**
-   * @param sortOrder the sortOrder to set
-   */
-  public void setSortOrder(String sortOrder) {
-    this.sortOrder = sortOrder;
-  } // end of method setSortOrder
-  
-  /**
    * @return the totalRows
    */
   public int getTotalRows() {
@@ -336,8 +321,6 @@ public class PagingVO implements java.io.Serializable {
     str.append(totalRows);
     str.append("\tsortBy : ");
     str.append(sortBy);
-    str.append("\nsortOrder : ");
-    str.append(sortOrder);
     str.append("\tnumberOfPagesToShow : ");
     str.append(numberOfPagesToShow);
     str.append("\ttotalPages : ");

@@ -140,6 +140,96 @@ public class StringUtils {
   } // end of method setLength
 
   /**
+   * Converts a <code>boolean</code> array into to a single
+   * <code>String</code> separated by given character.
+   * @param src <code>boolean</code> array that is to be converted into a single
+   * <code>String</code>
+   * @param separator To be used to separate the elements of the given array in
+   * the resulting string
+   * @return String having array elements separated by given character.
+   */
+  public static String booleanArrayToString(boolean [] src, char separator){
+    if(src == null){
+      return null;
+    } // end of else
+    return booleanArrayToString(src, separator, src.length);
+  } // end of method intArrayToString
+
+  /**
+   * Converts a <code>boolean</code> array into to a single
+   * <code>String</code> separated by given character
+   * <code>separator</code>.
+   * @param src <code>boolean</code> array that is to be converted into a
+   * single <code>String</code>.
+   * @param separator To be used to separate the elements of array in
+   * the resulting string.
+   * @param noOfElements Number of elements from start to be taken
+   * from <code>src</code> array.
+   * @return String having given number of array elements separated by
+   * given character.
+   */
+  public static String booleanArrayToString(boolean [] src, char separator, int noOfElements){
+    StringBuffer sb = null;
+    if(src != null && src.length > 0){
+      sb = new StringBuffer("" + src[0]);
+    } // end of if
+    else{
+      return null;
+    } // end of else
+    for(int i = 1; i < noOfElements; i++){
+      sb.append(separator + "" + src[i]);
+    } // end of for
+    return sb.toString();
+  } // end of method intArrayToString
+
+  /**
+   * Converts a {@link Boolean} array into to a single {@link String} separated
+   * by given <code>separator</code>.
+   * 
+   * @param src {@link Boolean} array that is to be converted into a single
+   *  {@link String}.
+   * @param separator To be used to separate the elements of the given array in
+   * the returned string.
+   * 
+   * @return String having array elements separated by given character.
+   */
+  public static String booleanArrayToString(Boolean [] src, char separator){
+    if(src == null){
+      return null;
+    } // end of else
+    return booleanArrayToString(src, separator, src.length);
+  } // end of method integerArrayToString
+
+
+  /**
+   * Converts a {@link Boolean} array into to a single {@link String} separated
+   * by given character <code>separator</code>.
+   * 
+   * @param src {@link Boolean} array that is to be converted into a single
+   * {@link String}.
+   * @param separator To be used to separate the elements of array in the
+   * returned string.
+   * @param noOfElements Number of elements from start to be taken from
+   * <code>src</code> array.
+   * 
+   * @return String having given number of array elements separated by
+   * given character.
+   */
+  public static String booleanArrayToString(Boolean [] src, char separator, int noOfElements){
+    StringBuilder sb = null;
+    if(src != null && src.length > 0){
+      sb = new StringBuilder("" + src[0].booleanValue());
+    } // end of if
+    else{
+      return null;
+    } // end of else
+    for(int i = 1; i < noOfElements; i++){
+      sb.append(separator + "" + src[i].booleanValue());
+    } // end of for
+    return sb.toString();
+  } // end of method integerArrayToString
+
+  /**
    * Converts a <code>int</code> array into to a single
    * <code>String</code> separated by given character.
    * @param src <code>int</code> array that is to be converted into a single

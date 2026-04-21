@@ -203,23 +203,76 @@ public class DAOImpl extends AbstractDAO {
       if(insertContainedParentObjects) {
         insertContainedParentObjects(clazz, pojo, insertedObj, con, insertContainedParentObjects, insertContainedChildObjects);
       } // end of if
-      
-      // super class objects
+
+      // Handle inheritance: copy inheritedPK and inheritedAttributes from parent
       Class superClass = ORMInfoManager.getSuperClass(clazz);
       if(superClass != null && superClass.getName().equals(Object.class.getName()) == false) {
+        Object parentObj = null;
         
-        if(ORMInfoManager.isInstanceMemberValueSet(pojo, ORMInfoManager.getPrimaryKeyField(superClass.getName())) == false) {
-          logger.finer("About to insert super object of type [" + superClass.getName() + "] for [" + clazz.getName() + "].");
-          DbResult<T> insertedParentObj = insert(superClass, pojo, con, true, insertContainedParentObjects, insertContainedChildObjects);
-          Object insertedSuperObject = insertedParentObj.getEntities().toArray()[0];
-          logger.finer("insertedSuperObject : " + insertedSuperObject.toString());
-          Object insertedObjPKValue = ORMInfoManager.getPrimaryKeyValue(insertedSuperObject);
-          DBField pkField = ORMInfoManager.getPrimaryKeyField(pojo.getClass().getName());
-          ORMInfoManager.setInstanceMemberValue(pojo, pkField, insertedObjPKValue);
-          logger.finer("To be inserted object after setting the super PK: " + pojo.toString());
+        // Check if we need to insert parent first (when parent PK is not set)
+        boolean inheritPK = ORMInfoManager.isInheritPK(pojo);
+        if(inheritPK) {
+          // When inheritPK is true, the child uses parent's PK
+          // First check if parent exists and needs to be inserted
+          String superClassPKName = ORMInfoManager.getPrimaryKeyName(superClass.getName());
+          logger.finer("Super class [" + superClass.getName() + "] PK name: " + superClassPKName);
+          if(ORMInfoManager.isInstanceMemberValueSet(pojo, ORMInfoManager.getPrimaryKeyField(superClass.getName())) == false) {
+            logger.finer("About to insert super object of type [" + superClass.getName() + "] for [" + clazz.getName() + "].");
+            DbResult<T> insertedParentObj = insert(superClass, pojo, con, true, insertContainedParentObjects, insertContainedChildObjects);
+            Object insertedSuperObject = insertedParentObj.getEntities().toArray()[0];
+            logger.finer("insertedSuperObject : " + insertedSuperObject.toString());
+            Object insertedObjPKValue = ORMInfoManager.getPrimaryKeyValue(superClass, insertedSuperObject);
+            // Set the inherited PK in the child object
+            DBField pkField = ORMInfoManager.getFieldByInstanceMemberName(pojo, superClassPKName);
+            if(pkField != null) {
+              ORMInfoManager.setInstanceMemberValue(pojo, pkField, insertedObjPKValue);
+              logger.finer("Set inherited PK [" + insertedObjPKValue + "] in field [" + pkField.getInstanceMemberName() + "] of [" + clazz.getName() + "] object.");
+            } else {
+              logger.warning("Could not find inherited PK field [" + superClassPKName + "] in [" + clazz.getName() + "]");
+            }
+          }
+        } else {
+          // Traditional inheritance: insert parent and set FK in child
+          if(ORMInfoManager.isInstanceMemberValueSet(pojo, ORMInfoManager.getPrimaryKeyField(superClass.getName())) == false) {
+            logger.finer("About to insert super object of type [" + superClass.getName() + "] for [" + clazz.getName() + "].");
+            DbResult<T> insertedParentObj = insert(superClass, pojo, con, true, insertContainedParentObjects, insertContainedChildObjects);
+            Object insertedSuperObject = insertedParentObj.getEntities().toArray()[0];
+            logger.finer("insertedSuperObject : " + insertedSuperObject.toString());
+            Object insertedObjPKValue = ORMInfoManager.getPrimaryKeyValue(insertedSuperObject);
+            DBField pkField = ORMInfoManager.getPrimaryKeyField(pojo.getClass().getName());
+            ORMInfoManager.setInstanceMemberValue(pojo, pkField, insertedObjPKValue);
+            logger.finer("To be inserted object after setting the super PK: " + pojo.toString());
+          }
+        }
+        
+        // Copy inherited attributes from parent object if they exist
+        String[] inheritedAttributes = ORMInfoManager.getInheritedAttributes(pojo);
+        if(inheritedAttributes != null && inheritedAttributes.length > 0) {
+          // Get or create parent object to copy values from
+          if(parentObj == null) {
+            parentObj = ORMInfoManager.instantiate(superClass.getName());
+            // Copy field values from pojo to parentObj to get the values
+            ORMInfoManager.copyFields(parentObj, pojo);
+          }
+          // Copy each inherited attribute value
+          for(String attrName : inheritedAttributes) {
+            try {
+              DBField inheritedField = ORMInfoManager.getFieldByInstanceMemberName(pojo, attrName);
+              DBField parentField = ORMInfoManager.getFieldByInstanceMemberName(parentObj, attrName);
+              if(inheritedField != null && parentField != null) {
+                Object value = parentField.getGetterMethod().invoke(parentObj);
+                if(value != null) {
+                  inheritedField.getSetterMethod().invoke(pojo, value);
+                  logger.finer("Copied inherited attribute [" + attrName + "] = [" + value + "] to [" + clazz.getName() + "] object.");
+                }
+              }
+            } catch(Exception e) {
+              logger.warning("Could not copy inherited attribute [" + attrName + "]: " + e.getMessage());
+            }
+          }
         }
       } // end of if
-      
+
       logger.finer("About to insert [" + clazz.getName() + "] object with primary key field value [" + pkValue + "].");
       String sql = createInsertQuery(clazz, pojo, returnAffectedObject);
       logger.info(sql + ";");
@@ -235,12 +288,12 @@ public class DAOImpl extends AbstractDAO {
         resultObj = new DbResult<T>(affectedCount);
       }
       logger.finer("Inserted [" + clazz.getName() + "] object with primary key field value [" + pkValue + "] successfully.");
-            
+
       // contained Objects
       if(insertContainedChildObjects) {
         insertContainedChildObjects(clazz, pojo, insertedObj, con, insertContainedParentObjects, insertContainedChildObjects);
       }
-   
+
       if(isNewConnection) {
         try {
           con.commit();
@@ -263,13 +316,13 @@ public class DAOImpl extends AbstractDAO {
       }
     }
     return resultObj;
-  } // end of method insertTest
+  } // end of method insert
 
   public String createUpdateQuery(Object pojo, boolean returnUpdatedObject) {
     String[] fields = StringUtils.splitString(ORMInfoManager.getPlainDBFieldNames(pojo), sqlConstants.getFieldsSeparator());
     SQLCriterion[] criteria = new SQLCriterion[1];
     Object pkValue = ORMInfoManager.getPrimaryKeyValue(pojo);
-    criteria[0] = criteronFactory.createEqualTo(ORMInfoManager.getPrimaryKeyField(pojo).getDbFieldName(), pkValue);
+    criteria[0] = criterionFactory.createEqualTo(ORMInfoManager.getPrimaryKeyField(pojo).getDbFieldName(), pkValue);
     
     return createUpdateQuery(pojo, fields, criteria, SQLCriterion.BOOLEAN_OPERATOR.AND, returnUpdatedObject);
   } // end of method createUpdateQuery
@@ -301,7 +354,7 @@ public class DAOImpl extends AbstractDAO {
       str.append(valuesVec.elementAt(i));
     } // end of for
 
-    String whereClause = criteronFactory.createCriteriaString(criteria, booleanOperator);
+    String whereClause = criterionFactory.createCriteriaString(criteria, booleanOperator);
     if(StringUtils.getNull(whereClause) != null) {
       whereClause = sqlConstants.getQryWhere().format(new Object[] {whereClause});
     } // end of if
@@ -339,14 +392,14 @@ public class DAOImpl extends AbstractDAO {
   
   public String createDeleteQuery(Object pojo, boolean returnDeletedObjects) {
     SQLCriterion[] criteria = new SQLCriterion[1];
-    criteria[0] = criteronFactory.createEqualTo(ORMInfoManager.getPrimaryKeyField(pojo).getDbFieldName(), null, ORMInfoManager.getPrimaryKeyValue(pojo));
+    criteria[0] = criterionFactory.createEqualTo(ORMInfoManager.getPrimaryKeyField(pojo).getDbFieldName(), null, ORMInfoManager.getPrimaryKeyValue(pojo));
     return createDeleteQuery(pojo, criteria, SQLCriterion.BOOLEAN_OPERATOR.AND, returnDeletedObjects);
   } // end of method createDeleteQuery
   
   public String createDeleteQuery(Object pojo, Collection ids, boolean returnDeletedObjects) {
     SQLCriterion[] criteria = new SQLCriterion[1];
     Object pkValue = ids != null && ids.size() > 0 ? ids.toArray()[0] : null;
-    criteria[0] = criteronFactory.createIn(ORMInfoManager.getQualifiedPrimaryKey(pojo), null, ids, criteronFactory.getType(pkValue), null, null);
+    criteria[0] = criterionFactory.createIn(ORMInfoManager.getQualifiedPrimaryKey(pojo), null, ids, criterionFactory.getType(pkValue), null, null);
     return createDeleteQuery(pojo, criteria, SQLCriterion.BOOLEAN_OPERATOR.AND, returnDeletedObjects);
   } // end of method createDeleteQuery
   
@@ -354,7 +407,7 @@ public class DAOImpl extends AbstractDAO {
       BOOLEAN_OPERATOR booleanOperator, boolean returnDeletedObjects) {
     String criteriaStr = "";
     if(criteria == null || criteria.length < 1) throw new RuntimeException("Criteria must be given for DELETE SQL statement.");
-    criteriaStr = criteronFactory.createCriteriaString(criteria, booleanOperator);
+    criteriaStr = criterionFactory.createCriteriaString(criteria, booleanOperator);
     if(StringUtils.getNull(criteriaStr) != null) {
       criteriaStr = sqlConstants.getQryWhere().format(new Object[] {criteriaStr});
     } // end of if
@@ -404,23 +457,6 @@ public class DAOImpl extends AbstractDAO {
   
   protected String wrapSortBy(String orderByClause) {
     if(orderByClause == null || orderByClause.trim().length() < 1) return orderByClause;
-
-    List<String> wrappedOrderByComponents = new ArrayList<String>();
-    String [] orderByComponents = orderByClause.split(",");
-    for (int i = 0; i < orderByComponents.length; i++) {
-      String[] fieldAndDir = orderByComponents[i].trim().split(" ");
-      String sortDirection = (fieldAndDir.length > 1 && isValidSortDirection(fieldAndDir[1]) ?  " " + fieldAndDir[1].trim() : "");
-      wrappedOrderByComponents.add(wrapFields(fieldAndDir[0]) + sortDirection);
-    }
-    return String.join(",", wrappedOrderByComponents);
+    return SQLFieldWrapper.wrapDBField(orderByClause, SQLConstants.FIELD_PREFIX);
   }
-  
-  private static boolean isValidSortDirection(String sortDirection) {
-    if(sortDirection == null) return false;
-    sortDirection = sortDirection.trim();
-    if(sortDirection.length() < 1 || "ASC".equalsIgnoreCase(sortDirection) || "DESC".equalsIgnoreCase(sortDirection))
-      return true;
-    return false;
-  }
-
 }

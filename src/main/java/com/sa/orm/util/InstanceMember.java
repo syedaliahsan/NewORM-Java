@@ -2,6 +2,8 @@ package com.sa.orm.util;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.logging.Logger;
 
 /**
@@ -104,57 +106,104 @@ public class InstanceMember {
 
   /**
    * Setter {@link Method} of this field.
-   * 
-   * @return An object of {@link Method} which sets the value of this field.
+   * Handles standard "setFieldName" and boolean "setActive" for field "isActive".
+   * * @return An object of {@link Method} which sets the value of this field.
    */
   public Method getSetterMethod() {
-    if(this.pojo == null || this.field == null) {
+    if (this.pojo == null || this.field == null) {
       setterMethod = null;
       return null;
     }
-    if(setterMethod != null) {
+    if (setterMethod != null) {
       return setterMethod;
     }
-    String setterName = "set" + StringUtils.firstLetterCapital(this.getInstanceMemberName());
-    try {
-      setterMethod = pojo.getClass().getMethod(setterName, new Class[] {field.getType()});
+
+    String fieldName = this.getInstanceMemberName();
+    String capitalizedName = StringUtils.firstLetterCapital(fieldName);
+    
+    // Default strategy: setFieldName
+    String setterName = "set" + capitalizedName;
+
+    // Boolean optimization: If field is "isActive", Lombok/JavaBeans uses "setActive"
+    if (field.getType() == boolean.class || field.getType() == Boolean.class) {
+      if (fieldName.startsWith("is") && fieldName.length() > 2 && Character.isUpperCase(fieldName.charAt(2))) {
+        setterName = "set" + fieldName.substring(2);
+      }
     }
-    catch(NoSuchMethodException nsme) {
-      logger.severe(nsme.getMessage());
-      nsme.printStackTrace();
+
+    try {
+      setterMethod = pojo.getClass().getMethod(setterName, new Class[] { field.getType() });
+      logger.finer("Setter " + setterName + " found for field " + fieldName + " in " + pojo.getClass().getName());
+    }
+    catch (NoSuchMethodException nsme) {
+      // Fallback: If "setActive" failed, try the literal "setIsActive" 
+      if (setterName.startsWith("set") && !setterName.equals("set" + capitalizedName)) {
+        try {
+          setterName = "set" + capitalizedName;
+          setterMethod = pojo.getClass().getMethod(setterName, new Class[] { field.getType() });
+          logger.finer("Setter " + setterName + " found for field " + fieldName + " in " + pojo.getClass().getName());
+        }
+        catch (NoSuchMethodException e) {
+          logger.severe("Setter not found for: " + fieldName);
+        }
+      }
+      else {
+        logger.severe(nsme.getMessage());
+      }
     }
     return setterMethod;
   }
-  
+
   /**
    * Getter {@link Method} of this field.
-   * 
-   * @return An object of {@link Method} which returns the value of this field.
+   * Handles "getFieldName", "isFieldName", and "isActive" for field "isActive".
+   * * @return An object of {@link Method} which returns the value of this field.
    */
   public Method getGetterMethod() {
-    if(this.pojo == null || this.field == null) {
+    if (this.pojo == null || this.field == null) {
       getterMethod = null;
-      System.out.println("Returning null for field [" + this.getField() + "]");
       return null;
     }
-    if(getterMethod != null) {
+    if (getterMethod != null) {
       return getterMethod;
     }
-    String getterName = "get" + StringUtils.firstLetterCapital(this.getInstanceMemberName());
-    try {
-      getterMethod = pojo.getClass().getMethod(getterName, new Class[0]);
-    } catch(NoSuchMethodException nsme) {
-      logger.warning("Getter method not found with name [" + getterName + "]");
-      getterName = "is" + StringUtils.firstLetterCapital(this.getInstanceMemberName());
-      try {
-        getterMethod = pojo.getClass().getMethod(getterName, new Class[0]);
-      } catch(NoSuchMethodException nsme1) {
-        logger.warning("Getter method not found with name [" + getterName + "]");
+
+    String fieldName = this.getInstanceMemberName();
+    String capitalizedName = StringUtils.firstLetterCapital(fieldName);
+    Class<?> type = field.getType();
+
+    // List of potential getter names to try in order
+    List<String> candidates = new ArrayList<>();
+    
+    if (type == boolean.class || type == Boolean.class) {
+      // 1. Try "isActive" (if field is "isActive") or "isSubscribed" (if field is "subscribed")
+      if (fieldName.startsWith("is") && fieldName.length() > 2 && Character.isUpperCase(fieldName.charAt(2))) {
+        candidates.add(fieldName); 
+      }
+      else {
+        candidates.add("is" + capitalizedName);
       }
     }
-    return getterMethod;
-  } // end of method getGetterMethod
+    
+    // 2. Try standard "getFieldName"
+    candidates.add("get" + capitalizedName);
 
+    for (String name : candidates) {
+      try {
+        getterMethod = pojo.getClass().getMethod(name, new Class[0]);
+        if (getterMethod != null) break;
+      } catch (NoSuchMethodException ignored) {
+        // Continue to next candidate
+      }
+    }
+
+    if (getterMethod == null) {
+      logger.warning("Getter method not found for field [" + fieldName + "]");
+    }
+    
+    return getterMethod;
+  }
+  
   /**
    * Returns the instance member values formatted in a string.
    * 

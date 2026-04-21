@@ -41,7 +41,7 @@ public abstract class AbstractDAO implements DAO {
   /**
    * Database specific factory class to create {@link SQLCriterion} objects.
    */
-  protected SQLCriterionFactory criteronFactory;
+  protected SQLCriterionFactory criterionFactory;
   
   /**
    * Database specific factory class to create {@link SQLFunction} objects to
@@ -87,7 +87,7 @@ public abstract class AbstractDAO implements DAO {
   public AbstractDAO(SQLCriterionFactory criterionFactoryImpl,
       SQLFunctionFactory functionFactoryImpl, ExceptionUtil exceptionUtilImpl,
       SQLConstants sqlConstants) {
-    this.criteronFactory = criterionFactoryImpl;
+    this.criterionFactory = criterionFactoryImpl;
     this.functionFactory = functionFactoryImpl;
     this.exceptionUtil = exceptionUtilImpl;
     this.sqlConstants = sqlConstants;
@@ -196,7 +196,7 @@ public abstract class AbstractDAO implements DAO {
   public <T> T getById(T pojo, String[] fields)
       throws ORMException {
     SQLCriterion[] criteria = new SQLCriterion[1];
-    criteria[0] = criteronFactory.createEqualTo(ORMInfoManager.getQualifiedPrimaryKey(pojo), null, 
+    criteria[0] = criterionFactory.createEqualTo(ORMInfoManager.getQualifiedPrimaryKey(pojo), null, 
         ORMInfoManager.getPrimaryKeyValue(pojo), SQLCriterionFactory.INT);
     
     return getById(pojo, fields, null);
@@ -221,7 +221,7 @@ public abstract class AbstractDAO implements DAO {
   public <T> T getById(T pojo, String[] fields, Connection con)
       throws ORMException {
     SQLCriterion[] criteria = new SQLCriterion[1];
-    criteria[0] = criteronFactory.createEqualTo(ORMInfoManager.getQualifiedPrimaryKey(pojo), null, 
+    criteria[0] = criterionFactory.createEqualTo(ORMInfoManager.getQualifiedPrimaryKey(pojo), null, 
         ORMInfoManager.getPrimaryKeyValue(pojo), SQLCriterionFactory.INT);
     
     return search(pojo, fields, criteria, BOOLEAN_OPERATOR.AND, null, 0, 1, con).iterator().next();
@@ -670,7 +670,9 @@ public abstract class AbstractDAO implements DAO {
       Collection<NameValueVO> attributeValues, String sortBy,
       int limitStart, int limitSize, Connection con) throws ORMException {
     PagingVO pagingVO = searchByAttributes(pojo, fields, attributeValues, sortBy, limitStart, limitSize, con);
-    return (T)pagingVO.getResults().get(0);
+    List<?> results = pagingVO.getResults();
+    if(results == null || results.size() < 1) return null;
+    return (T)results.get(0);
   } // end of method searchPaging
 
   public <T> T getFirstByAttribute(T pojo, NameValueVO attributeValue,
@@ -990,7 +992,7 @@ public abstract class AbstractDAO implements DAO {
    */
   public <T> DbResult<T> update(T pojo, String[] fields, Connection con, boolean returnUpdatedObject) throws ORMException {
     SQLCriterion[] criteria = new SQLCriterion[1];
-    criteria[0] = criteronFactory.createEqualTo(ORMInfoManager.getQualifiedPrimaryKey(pojo), null, 
+    criteria[0] = criterionFactory.createEqualTo(ORMInfoManager.getQualifiedPrimaryKey(pojo), null, 
         ORMInfoManager.getPrimaryKeyValue(pojo), SQLCriterionFactory.INT);
     return update(pojo, fields, criteria, BOOLEAN_OPERATOR.AND, con, returnUpdatedObject);
   } // end of method update
@@ -1195,11 +1197,11 @@ public abstract class AbstractDAO implements DAO {
 
     DBField containerObjRelatedField = ORMInfoManager.getFieldByInstanceMemberName(containerObj, containedObjField.getRelatedInstanceMemberName());
     Object pkValue = Utility.invokeMethod(containerObj, containerObjRelatedField.getGetterMethod());
-    List ids = ORMInfoManager.getIds(containers);
+    List ids = ORMInfoManager.getFieldValues(containers, containerObjRelatedField);
     Collections.sort(ids);
     DBField containedObjPKField = ORMInfoManager.getDBField(containedObjField.getContainedObjectType(), containedObjField.getReferencedField());
     SQLCriterion[] criteria = new SQLCriterion[1];
-    criteria[0] = criteronFactory.createIn(containedObjField.getReferencedField(), containedObjField.getReferencedEntity(), ids, criteronFactory.getType(pkValue), null, null);
+    criteria[0] = criterionFactory.createIn(containedObjField.getReferencedField(), containedObjField.getReferencedEntity(), ids, criterionFactory.getType(pkValue), null, null);
     
     Collection records = search(containedObjPKField.getPojo(), null, criteria, BOOLEAN_OPERATOR.AND, ORMInfoManager.getQualifiedField(containedObjField.getReferencedEntity(), containedObjPKField.getDbFieldName(), true), -1, -1, con);
     if (records == null || records.size() < 1) {
@@ -1306,7 +1308,7 @@ public abstract class AbstractDAO implements DAO {
   public String createSelectQuery(Object pojo, int level) {
     SQLCriterion[] criteria = new SQLCriterion[1];
     Object pkValue = ORMInfoManager.getPrimaryKeyValue(pojo);
-    criteria[0] = criteronFactory.createEqualTo(ORMInfoManager.getQualifiedPrimaryKey(pojo), pkValue);
+    criteria[0] = criterionFactory.createEqualTo(ORMInfoManager.getQualifiedPrimaryKey(pojo), pkValue);
     return createSelectQuery(pojo, level, criteria, BOOLEAN_OPERATOR.AND);
   } // end of method createSelectQuery
   
@@ -1435,7 +1437,7 @@ public abstract class AbstractDAO implements DAO {
           String parentEntity = StringUtils.wrap(parentEntityName, sqlConstants.getFieldPrefix(), sqlConstants.getFieldSuffix());
           String parentTableReferenceField = ORMInfoManager.getQualifiedField(null, parentPK, true);
           String childTableReferenceField = ORMInfoManager.getQualifiedField(null, ORMInfoManager.getPrimaryKeyField(childObj).getDbFieldName(), true);
-          from.append(getSimpleInnerJoin(entityName, parentEntity, parentEntity, childTableReferenceField, parentTableReferenceField).getJoinClause(criteronFactory));
+          from.append(getSimpleInnerJoin(entityName, parentEntity, parentEntity, childTableReferenceField, parentTableReferenceField).getJoinClause(criterionFactory));
           childObj = parentObj;
           Class superClass1 = ORMInfoManager.getSuperClass(childObj.getClass());
           if(superClass1 == null || Modifier.isAbstract(superClass.getModifiers()) || Object.class.getName().equals(parentObj.getClass().getName())) {
@@ -1454,7 +1456,7 @@ public abstract class AbstractDAO implements DAO {
           wrappedFromElement.setTableName(wrapFields(join.getRightSide().getTableName()));
           wrappedFromElement.setAlias(wrapFields(join.getRightSide().getAlias()));
           join.setRightSide(wrappedFromElement);
-          from.append(join.getJoinClause(criteronFactory));
+          from.append(join.getJoinClause(criterionFactory));
         }
         catch (SQLSyntaxErrorException e) {
            throw new RuntimeException(e);
@@ -1463,7 +1465,7 @@ public abstract class AbstractDAO implements DAO {
     }
 
     if(criteria != null && criteria.length > 0) {
-      String criteriaStr = criteronFactory.createCriteriaString(criteria, booleanOperator);
+      String criteriaStr = criterionFactory.createCriteriaString(criteria, booleanOperator);
       if(criteriaStr != null && criteriaStr.trim().length() > 0) {
         if(where.toString().trim().length() > 0) {
           where.append(" ");
@@ -1492,7 +1494,7 @@ public abstract class AbstractDAO implements DAO {
     } // end of if
     
     if(functions == null || functions.length < 1) {
-      return sqlConstants.getQrySelectQuery().format(new Object[] {sqlConstants.getQrySelect().format(new Object[] {sqlConstants.getDistinct() + strFields.toString()}), 
+      return sqlConstants.getQrySelectQuery().format(new Object[] {sqlConstants.getQrySelect().format(new Object[] {strFields.toString()}), 
           sqlConstants.getQryFrom().format(new Object[] {from.toString()}), whereClause, sortByClause, limitClause}).trim();
     } // end of if
     String groupByClauseStr = "";
@@ -1534,7 +1536,7 @@ public abstract class AbstractDAO implements DAO {
           where.append(" ");
         } // end of if
         where.append("(");
-        where.append(criteronFactory.createCriteriaString(criteria, booleanOperator));
+        where.append(criterionFactory.createCriteriaString(criteria, booleanOperator));
         where.append(")");
       } // end of if
       String whereClause = (where.toString().length() > 0) ? sqlConstants.getQryWhere().format(new Object[] {where.toString()}) : "";
@@ -1554,7 +1556,8 @@ public abstract class AbstractDAO implements DAO {
       } // end of if
       
       if(functions == null || functions.length < 1) {
-        return sqlConstants.getQrySelectQuery().format(new Object[] {sqlConstants.getQrySelect().format(new Object[] {sqlConstants.getDistinct() + strFields.toString()}), 
+        //return sqlConstants.getQrySelectQuery().format(new Object[] {sqlConstants.getQrySelect().format(new Object[] {sqlConstants.getDistinct() + strFields.toString()}), 
+        return sqlConstants.getQrySelectQuery().format(new Object[] {sqlConstants.getQrySelect().format(new Object[] {strFields.toString()}), 
             from.toString(), whereClause, sortByClause, limitClause}).trim();
       } // end of if
       groupByClause.append(strFields.toString());
@@ -1618,7 +1621,7 @@ public abstract class AbstractDAO implements DAO {
     String[] fields = StringUtils.splitString(ORMInfoManager.getPlainDBFieldNames(pojo), sqlConstants.getFieldsSeparator());
     SQLCriterion[] criteria = new SQLCriterion[1];
     Object pkValue = ORMInfoManager.getPrimaryKeyValue(pojo);
-    criteria[0] = criteronFactory.createEqualTo(ORMInfoManager.getPrimaryKeyField(pojo).getDbFieldName(), pkValue);
+    criteria[0] = criterionFactory.createEqualTo(ORMInfoManager.getPrimaryKeyField(pojo).getDbFieldName(), pkValue);
     
     return createUpdateQuery(pojo, fields, criteria, BOOLEAN_OPERATOR.AND);
   } // end of method createUpdateQuery
@@ -1648,7 +1651,7 @@ public abstract class AbstractDAO implements DAO {
       str.append(valuesVec.elementAt(i));
     } // end of for
 
-    String whereClause = criteronFactory.createCriteriaString(criteria, booleanOperator);
+    String whereClause = criterionFactory.createCriteriaString(criteria, booleanOperator);
     if(StringUtils.getNull(whereClause) != null) {
       whereClause = sqlConstants.getQryWhere().format(new Object[] {whereClause});
     } // end of if
@@ -1660,7 +1663,7 @@ public abstract class AbstractDAO implements DAO {
    */
   public String createDeleteQuery(Object pojo) {
     SQLCriterion[] criteria = new SQLCriterion[1];
-    criteria[0] = criteronFactory.createEqualTo(ORMInfoManager.getPrimaryKeyField(pojo).getDbFieldName(), null, ORMInfoManager.getPrimaryKeyValue(pojo));
+    criteria[0] = criterionFactory.createEqualTo(ORMInfoManager.getPrimaryKeyField(pojo).getDbFieldName(), null, ORMInfoManager.getPrimaryKeyValue(pojo));
     return createDeleteQuery(pojo, criteria, BOOLEAN_OPERATOR.AND);
   } // end of method createDeleteQuery
   
@@ -1670,7 +1673,7 @@ public abstract class AbstractDAO implements DAO {
   public String createDeleteQuery(Object pojo, Collection ids) {
     SQLCriterion[] criteria = new SQLCriterion[1];
     Object pkValue = ids != null && ids.size() > 0 ? ids.toArray()[0] : null;
-    criteria[0] = criteronFactory.createIn(ORMInfoManager.getQualifiedPrimaryKey(pojo), null, ids, criteronFactory.getType(pkValue), null, null);
+    criteria[0] = criterionFactory.createIn(ORMInfoManager.getQualifiedPrimaryKey(pojo), null, ids, criterionFactory.getType(pkValue), null, null);
     return createDeleteQuery(pojo, criteria, BOOLEAN_OPERATOR.AND);
   } // end of method createDeleteQuery
   
@@ -1680,7 +1683,7 @@ public abstract class AbstractDAO implements DAO {
   public String createDeleteQuery(Object pojo, SQLCriterion[] criteria, BOOLEAN_OPERATOR booleanOperator) {
     String criteriaStr = "";
     if(criteria != null && criteria.length > 0) {
-      criteriaStr = criteronFactory.createCriteriaString(criteria, booleanOperator);
+      criteriaStr = criterionFactory.createCriteriaString(criteria, booleanOperator);
     } // end of if
     if(StringUtils.getNull(criteriaStr) != null) {
       criteriaStr = sqlConstants.getQryWhere().format(new Object[] {criteriaStr});
@@ -2542,7 +2545,7 @@ public abstract class AbstractDAO implements DAO {
 
         fieldValues = Utility.getFieldValues(containers, containerField.getGetterMethod());
         
-        criteria[0] = criteronFactory.createIn(containedField.getDbFieldName(), containedField.getEntityName(), fieldValues, criteronFactory.getType(containerRelatedFieldValue), null, null);
+        criteria[0] = criterionFactory.createIn(containedField.getDbFieldName(), containedField.getEntityName(), fieldValues, criterionFactory.getType(containerRelatedFieldValue), null, null);
 
         logger.finest("About to search contained objects - Time : " + System.currentTimeMillis());
         containedObjs = search(pojo, null, criteria, BOOLEAN_OPERATOR.OR, sortBy, -1, -1, con);
@@ -2589,7 +2592,7 @@ public abstract class AbstractDAO implements DAO {
     rhs.setTableName(rhsTableName);
     rhs.setAlias(rhsTableAlias);
     SQLCriterion[] joinCriteria = new SQLCriterion[1];
-    joinCriteria[0] = criteronFactory.createColumnComparison(lhsFieldName, lhsTableAlias, SQLCriterion.EQUAL_TO, rhsFieldName, rhsTableAlias);
+    joinCriteria[0] = criterionFactory.createColumnComparison(lhsFieldName, lhsTableAlias, SQLCriterion.EQUAL_TO, rhsFieldName, rhsTableAlias);
     return new Join(null, rhs, joinType, joinCriteria, BOOLEAN_OPERATOR.AND);
   }
   

@@ -1191,7 +1191,7 @@ public static String[] getConstants(Object obj) {
       }
     }
     catch (Exception e) {
-      logger.warning("Could not execute " + method.getName() + " on " + target.getClass().getName() + " with value " + inputArguments + "");
+      logger.warning("Could not execute " + method.getName() + " on " + target.getClass().getName() + " with value " + inputArguments[0] + "(" + inputArguments[0].getClass().getName() + ") for type " + method.getParameterTypes()[0]);
       logger.warning(Utility.getStackTrace(e));
     }
     
