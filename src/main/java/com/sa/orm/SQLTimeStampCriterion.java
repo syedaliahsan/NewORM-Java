@@ -176,7 +176,8 @@ public class SQLTimeStampCriterion implements SQLCriterion {
    * clause of an SQL Statement.
    */
   public String getCriterionString() {
-    StringBuffer criterionString = new StringBuffer(wrapFieldInMasks(fieldName, tableName, dbMask));
+    StringBuffer criterionString = new StringBuffer("(");
+    criterionString.append(wrapFieldInMasks(fieldName, tableName, dbMask));
     boolean orFlag = false;
     boolean andFlag = false;
     switch(operator) {

@@ -103,7 +103,7 @@ public class ORMInfoManager {
    * of simple (primitive wrapper classes and dates) instance members, list of
    * contained objects etc.</p>
    */
-  private static Map<String, Map<String, Object>> map = new TreeMap<String, Map<String, Object>>();
+  private static Map<String, Map<String, Object>> reflectionCache = new TreeMap<String, Map<String, Object>>();
 
   private static ClassLoader classLoader = null;
   
@@ -147,13 +147,13 @@ public class ORMInfoManager {
 
   /**
    * Prefix to the instance member name to be used as key to store corresponding
-   * {@link DBField} object in a map containing fields of a POJO.
+   * {@link DBField} object in a reflectionCache containing fields of a POJO.
    */
   private static final String INSTANCE_MEMBER_NAME_KEY_PREFIX = "instanceMember_";
 
   /**
    * Prefix to the database column name to be used as key to store corresponding
-   * {@link DBField} object in a map containing fields of a POJO.
+   * {@link DBField} object in a reflectionCache containing fields of a POJO.
    */
   private static final String COLUMN_NAME_KEY_PREFIX = "columnName_";
   
@@ -256,6 +256,11 @@ public class ORMInfoManager {
 
   private static ORMInfoManager ormInfoMgr;
   
+  public static void clearCache() {
+    reflectionCache = new TreeMap<String, Map<String, Object>>();
+  }
+  
+
   private ORMInfoManager() {
     ;
   } // end of constructor
@@ -611,7 +616,7 @@ public class ORMInfoManager {
    * returned.</p>
    */
   public static DBField getFieldByInstanceMemberName(String pojoName, String instanceMemberName) {
-    Map<String, Object> pojoFields = map.get(pojoName);
+    Map<String, Object> pojoFields = reflectionCache.get(pojoName);
 
     if(pojoFields == null) {
       return null;
@@ -635,7 +640,7 @@ public class ORMInfoManager {
    * given column's mapped instance member.
    */
   public static DBField getFieldByColumnName(Object pojo, String columnName) {
-    return (DBField)map.get(pojo.getClass().getName()).get(COLUMN_NAME_KEY_PREFIX + columnName);
+    return (DBField)reflectionCache.get(pojo.getClass().getName()).get(COLUMN_NAME_KEY_PREFIX + columnName);
   } // end of method getFieldByColumnName
 
   /**
@@ -653,7 +658,7 @@ public class ORMInfoManager {
    * given column's mapped instance member.
    */
   public static DBField getDBField(String typeName, String columnName) {
-    DBField field = (DBField)map.get(typeName).get(COLUMN_NAME_KEY_PREFIX + columnName);
+    DBField field = (DBField)reflectionCache.get(typeName).get(COLUMN_NAME_KEY_PREFIX + columnName);
     if(field == null) {
       logger.warning("No keys found against column [" + columnName + "] of type [" + typeName + "]");
     } // end of if
@@ -671,7 +676,7 @@ public class ORMInfoManager {
    */
   public static List<DBField> getFields(Object pojo) {
     return (List<DBField>)Collections.unmodifiableList((List<DBField>)get(pojo, ENUM_DB_FIELDS));
-    //return (List<DBField>)map.get(pojo.getClass().getName()).get(ENUM_DB_FIELDS);
+    //return (List<DBField>)reflectionCache.get(pojo.getClass().getName()).get(ENUM_DB_FIELDS);
   } // end of method getFields
   
   /**
@@ -780,7 +785,7 @@ public class ORMInfoManager {
    * Returns the corresponding object for the given key stored in the
    * {@link Map} for the given <code>pojo</code>.
    * <p>It is a general purpose method to give the user access to the
-   * underlying {@link #map} storing ORM information of the fields.</p>
+   * underlying {@link #reflectionCache} storing ORM information of the fields.</p>
    * 
    * @param pojo Object whose corresponding object stored against given
    * <code>key</code> is to be returned.
@@ -792,10 +797,10 @@ public class ORMInfoManager {
    */
   protected static Object get(Object pojo, String key) {
     String name = pojo.getClass().getName();
-    Map<String, Object> pojoMap = map.get(name);
+    Map<String, Object> pojoMap = reflectionCache.get(name);
     if(pojoMap == null) {
       introspect(pojo);
-      pojoMap = map.get(name);
+      pojoMap = reflectionCache.get(name);
     } // end of if
     return pojoMap.get(key);
   } // end of method get
@@ -804,9 +809,9 @@ public class ORMInfoManager {
    * Returns the corresponding object for the given key stored in the
    * {@link Map} against the given <code>pojoName</code>.
    * <p>It is a general purpose method to give the user access to the
-   * underlying {@link #map} storing ORM information of the fields.</p>
+   * underlying {@link #reflectionCache} storing ORM information of the fields.</p>
    * 
-   * @param pojoName Key in the {@link #map} whose corresponding object stored
+   * @param pojoName Key in the {@link #reflectionCache} whose corresponding object stored
    * against given <code>key</code> is to be returned.
    * @param key Key against which the store object for the given
    * <code>pojoName</code> is to be returned.
@@ -815,10 +820,10 @@ public class ORMInfoManager {
    * <code>pojoName</code>.
    */
   protected static Object get(String pojoName, String key) {
-    Map<String, Object> pojoMap = map.get(pojoName);
+    Map<String, Object> pojoMap = reflectionCache.get(pojoName);
     if(pojoMap == null) {
       introspect(instantiate(pojoName));
-      pojoMap = map.get(pojoName);
+      pojoMap = reflectionCache.get(pojoName);
     } // end of if
     return pojoMap.get(key);
   } // end of method get
@@ -840,12 +845,12 @@ public class ORMInfoManager {
    * <li>Builds various SQL field name representations for query construction.</li>
    * <li>Recursively introspects contained objects to build a complete object
    * graph.</li>
-   * <li>Caches all extracted metadata in a global map for future reference.</li></ol>
+   * <li>Caches all extracted metadata in a global reflectionCache for future reference.</li></ol>
    *
    * @param pojo The object to introspect. If null or already processed, the method returns early.
    *
    * Processing Flow:
-   * 1. Early Exit: Returns if pojo is null or already cached in the global map.
+   * 1. Early Exit: Returns if pojo is null or already cached in the global reflectionCache.
    * 2. Entity Identification: Determines the entity name from @Entity annotation or class name.
    * 3. Field Processing: Iterates through all fields to identify:
    *    - Database fields (@Field, @PrimaryKey, @Unique annotations)
@@ -853,7 +858,7 @@ public class ORMInfoManager {
    *    - Contained objects (@ContainedObject annotation)
    * 4. Metadata Aggregation: Collects processed field information into structured lists.
    * 5. SQL String Building: Constructs various formatted field name strings for SQL queries.
-   * 6. Cache Storage: Stores all metadata in a global map with multiple lookup keys.
+   * 6. Cache Storage: Stores all metadata in a global reflectionCache with multiple lookup keys.
    * 7. Recursive Processing: Introspects contained objects to ensure complete metadata.
    *
    * Metadata Structure:
@@ -879,7 +884,7 @@ public class ORMInfoManager {
    *   IllegalAccessException) and continues processing
    *
    * Thread Safety Note:
-   * This method modifies a shared static map. Concurrent access should be synchronized
+   * This method modifies a shared static reflectionCache. Concurrent access should be synchronized
    * externally if used in multi-threaded environments.
    *
    * Dependencies:
@@ -888,13 +893,13 @@ public class ORMInfoManager {
    * - Depends on SQL constants from sqlConstantsObj for query formatting
    *
    * Side Effects:
-   * - Modifies the static map field by adding new metadata entries
+   * - Modifies the static reflectionCache field by adding new metadata entries
    * - May recursively create and introspect new object instances for contained types
    * - Logs warnings to the logger for problematic configurations
    */
   protected static void introspect(Object pojo) {
     if(pojo == null) return;
-    if(map.containsKey(pojo.getClass().getName())) return;
+    if(reflectionCache.containsKey(pojo.getClass().getName())) return;
 
     if(classLoader == null) {
       classLoader = pojo.getClass().getClassLoader();
@@ -922,7 +927,6 @@ public class ORMInfoManager {
     
     
     Field[] fields = pojo.getClass().getDeclaredFields();
-    Field fd = null;
     
     // Map to contain all possible information of the given object for later use.
     Map<String, Object> map1 = new TreeMap<String, Object>();
@@ -934,7 +938,7 @@ public class ORMInfoManager {
     String columnName = null;
     
     for (int i = 0; i < fields.length; i++) {
-      fd = fields[i];
+      Field fd = fields[i];
       columnName = fd.getName();
       com.sa.orm.reflect.annotation.Field annoField = fd.getAnnotation(com.sa.orm.reflect.annotation.Field.class);
       ContainedObject contained = fd.getAnnotation(ContainedObject.class);
@@ -1026,7 +1030,7 @@ public class ORMInfoManager {
         Object parentObj = instantiate(inheritsClass.getName());
         if(parentObj != null) {
           // Ensure parent is introspected first
-          if(map.containsKey(inheritsClass.getName()) == false) {
+          if(reflectionCache.containsKey(inheritsClass.getName()) == false) {
             introspect(parentObj);
           }
 
@@ -1156,18 +1160,19 @@ public class ORMInfoManager {
     map1.put(ENUM_INSTANCE_SETTERS, (Method[])setters.toArray(new Method[0]));
     map1.put(ENUM_CONTAINED_OBJECT_FIELDS, containedObjects);
     
-    map.put(pojo.getClass().getName(), map1);
-    map.put(ENUM_ENTITY_NAME + "-" + entityName, map1);
+    reflectionCache.put(pojo.getClass().getName(), map1);
+    reflectionCache.put(ENUM_ENTITY_NAME + "-" + entityName, map1);
     
     for (ContainedObjectField containedObjField : containedObjects) {
       String containedType = containedObjField.getContainedObjectType();
+      Field fd = containedObjField.getField();
       if(fd.getType().isArray() == false && Utility.isChildClass(fd.getType(), Collection.class) == false && (containedType == null || containedType.trim().length() < 1)) {
         containedType = containedObjField.getPojo().getClass().getName();
       }
       if(containedType == null || containedType.trim().length() < 1) {
         continue;
       } // end of if
-      if(map.containsKey(containedType) == false) {
+      if(reflectionCache.containsKey(containedType) == false) {
         introspect(instantiate(containedObjField.getContainedObjectType()));
       } // end of if
     } // end of for

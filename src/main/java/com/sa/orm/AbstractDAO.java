@@ -81,6 +81,10 @@ public abstract class AbstractDAO implements DAO {
     } // end of catch
   } // end of static initializer
 
+  public static void clearCache() {
+    ORMInfoManager.clearCache();
+  }
+  
   /**
    * No arugment constructor does not do anything
    */
@@ -415,12 +419,12 @@ public abstract class AbstractDAO implements DAO {
       SQLCriterion[] criteria, BOOLEAN_OPERATOR booleanOperator, String sortBy, 
       int limitStart, int limitSize, List<Join> joins, Connection con)
       throws ORMException {
-    logger.finest("Entering - Time : " + System.currentTimeMillis());
+    logger.finest("search - Entering - Time : " + System.currentTimeMillis());
 
     String qry = createSelectQuery(pojo, ORMInfoManager.SUPER_LEVEL, fields, null, criteria, booleanOperator, sortBy, limitStart, limitSize, joins);
-    logger.finest("Select query built - Time : " + System.currentTimeMillis());
+    logger.finest("search - Select query built - Time : " + System.currentTimeMillis());
     
-    logger.info(qry + ";");
+    logger.info("search - " + qry);
     Vector<T> records = new Vector<T>();
 
     boolean isNewConnection = false;
@@ -440,7 +444,11 @@ public abstract class AbstractDAO implements DAO {
           obj = ORMInfoManager.instantiate(pojo.getClass().getName());
           fillObject(obj, rst);
           records.addElement((T)obj);
-        } catch(Exception e) {}
+        }
+        catch(Exception e) {
+          logger.severe("search - Error in fillObject: " + e.getMessage());
+          e.printStackTrace();
+        }
       } // end of while
     } // end of try
     catch(SQLException sqle) {
@@ -456,7 +464,7 @@ public abstract class AbstractDAO implements DAO {
       } // end of if connection was created locally
     } // end of finally
 
-    logger.finest("Leaving - Time : " + System.currentTimeMillis());
+    logger.finest("search - Leaving - Time : " + System.currentTimeMillis());
     return records;
   } // end of method search
   
@@ -508,15 +516,15 @@ public abstract class AbstractDAO implements DAO {
     String qry = createGroupByQuery(pojo, fields, functions,
         criteria, booleanOperator, sortBy, limitStart, limitSize, joins);
 
-    logger.finest("Group by query built in " + (System.currentTimeMillis() - currentMillis) + " milliseconds"); 
+    logger.finest("searchGroupBy - Group by query built in " + (System.currentTimeMillis() - currentMillis) + " milliseconds"); 
     
-    logger.info(qry + ";");
+    logger.info("searchGroupBy - " + qry);
     
     currentMillis = System.currentTimeMillis();
 
     Collection<Object[]> result = executeSelectQuery(qry, con);
 
-    logger.finest("Group by query executed and data populated as Collection of arrays of strings in " + (System.currentTimeMillis() - currentMillis) + " milliseconds"); 
+    logger.finest("searchGroupBy - Group by query executed and data populated as Collection of arrays of strings in " + (System.currentTimeMillis() - currentMillis) + " milliseconds"); 
 
     return result;
   } // end of method searchGroupBy
@@ -766,13 +774,13 @@ public abstract class AbstractDAO implements DAO {
       } // end of if
       Object parentObj = Utility.invokeMethod(pojo, containedObjField.getGetterMethod());
       if(parentObj != null && ORMInfoManager.isPrimaryKeyValueSet(parentObj) == false) {
-        logger.finer("Inserting parent object [" + parentObj.getClass().getName() + "] of [" + parentClass.getName() + "].");
+        logger.finer("insertContainedParentObjects - Inserting parent object [" + parentObj.getClass().getName() + "] of [" + parentClass.getName() + "].");
         DbResult<T> insertedObj = insert(parentObj.getClass(), (T)parentObj, con, false, insertContainedParentObjects, insertContainedChildObjects);
         
         DBField relatedInstanceMemberField = ORMInfoManager.getFieldByInstanceMemberName(parentClass, containedObjField.getRelatedInstanceMemberName());
         DBField parentField = ORMInfoManager.getDBField(containedObjField.getContainedObjectType(), containedObjField.getReferencedField());
         Object parentFieldValue = Utility.invokeMethod(parentObj, parentField.getGetterMethod());
-        logger.finer("Setting foreign key value [" + parentFieldValue + "] in [" + relatedInstanceMemberField.getInstanceMemberName() + "] field of [" + parentClass.getName() + "] object.");
+        logger.finer("insertContainedParentObjects - Setting foreign key value [" + parentFieldValue + "] in [" + relatedInstanceMemberField.getInstanceMemberName() + "] field of [" + parentClass.getName() + "] object.");
         Utility.invokeMethod(pojo, relatedInstanceMemberField.getSetterMethod(), new Object[] {parentFieldValue});
       } // end of if
     } // end of for
@@ -810,7 +818,7 @@ public abstract class AbstractDAO implements DAO {
 
     Object parentPKValue = ORMInfoManager.getPrimaryKeyValue(clazz, resultObj);
 
-    logger.finer("About to insert contained objects for [" + clazz.getName()
+    logger.finer("insertContainedChildObjects - About to insert contained objects for [" + clazz.getName()
         + "] object with primary key value [" + parentPKValue + "].");
     Collection<ContainedObjectField> containedObjFields = ORMInfoManager.getContainedObjectFields(clazz);
     if(containedObjFields == null) return;
@@ -822,18 +830,18 @@ public abstract class AbstractDAO implements DAO {
       try {
         containedObj = Utility.invokeMethod(pojo, containedObjField.getGetterMethod());
         if (containedObj == null) {
-          logger.finer("Contained object of type ["
+          logger.finer("insertContainedChildObjects - Contained object of type ["
               + containedObjField.getContainedObjectType()
               + "] is null. Hence skipping.");
           continue;
         } // end of if
 
         DBField childField = ORMInfoManager.getDBField(containedObjField.getContainedObjectType(), containedObjField.getReferencedField());
-        logger.finer("Contained child's related field name is [" + childField.getInstanceMemberName() + "].");
+        logger.finer("insertContainedChildObjects - Contained child's related field name is [" + childField.getInstanceMemberName() + "].");
         Method childFieldSetterMethod = childField.getSetterMethod();
 
         if (containedObj instanceof Collection) {
-          logger.finer("Contained object type is ["
+          logger.finer("insertContainedChildObjects - Contained object type is ["
               + containedObj.getClass().getName() + "] of ["
               + containedObjField.getContainedObjectType() + "].");
           Collection objs = (Collection) containedObj;
@@ -853,7 +861,7 @@ public abstract class AbstractDAO implements DAO {
           setterMethod.invoke(resultObj, new Object[] { insertedChildren });
         } // end of if
         else if (containedObj.getClass().isArray()) {
-          logger.finer("Contained object type is array of ["
+          logger.finer("insertContainedChildObjects - Contained object type is array of ["
               + containedObjField.getContainedObjectType() + "].");
           Object[] objs = (Object[]) containedObj;
           List<Object> insertedChildren = new ArrayList<>();
@@ -873,7 +881,7 @@ public abstract class AbstractDAO implements DAO {
               new Object[] { insertedChildren.toArray() });
         } // end of if
         else {
-          logger.finer("Contained object type is of type ["
+          logger.finer("insertContainedChildObjects - Contained object type is of type ["
               + containedObjField.getContainedObjectType() + "].");
           Utility.invokeMethod(containedObj, childFieldSetterMethod,
               new Object[] { parentPKValue });
@@ -889,7 +897,7 @@ public abstract class AbstractDAO implements DAO {
       }
       catch (Exception eee) {
         logger.warning(
-            "Error inserting contained child object: " + eee.getMessage());
+            "insertContainedChildObjects - Error inserting contained child object: " + eee.getMessage());
       }
     } // end of for
   } // end of method insertContainedChildObjects
@@ -961,7 +969,7 @@ public abstract class AbstractDAO implements DAO {
       } // end of if
       
       String[] fields = StringUtils.splitString(ORMInfoManager.getPlainDBFieldNames(pojo), sqlConstants.getFieldsSeparator());
-      logger.finest("object fields: " + Arrays.toString(fields));
+      logger.finest("update - object fields: " + Arrays.toString(fields));
       resultObj = update(pojo, fields, con, returnUpdatedObject);
       if(isNewConnection) {
         con.commit();
@@ -1108,7 +1116,7 @@ public abstract class AbstractDAO implements DAO {
           if(containedObjField.getRelationshipWithContainedObject() != AnnotationConstants.RELATIONSHIP_CHILD) {
             continue;
           }
-          logger.finer("Contained child object [" + containedObjField.getField().getName() + "]");
+          logger.finer("cascadeDelete - Contained child object [" + containedObjField.getField().getName() + "]");
           containedObj = Utility.invokeMethod(pojo, containedObjField.getGetterMethod());
           if(containedObj == null) {
             continue;
@@ -1120,7 +1128,7 @@ public abstract class AbstractDAO implements DAO {
             } // end of if
             Collection<T> collection = (Collection<T>)(Arrays.asList((T[])containedObj));
             DbResult<T> deletedChild = cascadeDelete(collection, con, returnDeletedObject);
-            logger.finer("Contained child objects [" + containedObj + "] are about to be deleted.");
+            logger.finer("cascadeDelete - Contained child objects [" + containedObj + "] are about to be deleted.");
           }
           if(containedObj instanceof Collection) {
             Collection<T> objs = (Collection<T>)containedObj;
@@ -1128,12 +1136,12 @@ public abstract class AbstractDAO implements DAO {
               continue;
             } // end of if
             DbResult<T> deletedChildren = cascadeDelete(objs, con, returnDeletedObject);
-            logger.finer("Contained child objects [" + containedObj + "] are about to be deleted.");
+            logger.finer("cascadeDelete - Contained child objects [" + containedObj + "] are about to be deleted.");
           } // end of if
           else {
             Collection<T> collection = (Collection<T>)(Arrays.asList((T[])new Object[] {containedObj}));
             result = cascadeDelete(collection, con, returnDeletedObject);
-            logger.finer("Contained child object [" + containedObj.toString() + "] is about to be deleted.");
+            logger.finer("cascadeDelete - Contained child object [" + containedObj.toString() + "] is about to be deleted.");
           } // end of if
         } // end of for contained objects
       } // end of for pojos
@@ -1174,11 +1182,11 @@ public abstract class AbstractDAO implements DAO {
     if(containers == null || containers.length < 1 || containedObjectInstanceMemeber == null || containedObjectInstanceMemeber.trim().length() < 1) {
       return;
     }
-    logger.info("containedObjectInstanceMemeber: " + containers[0].getClass().getName() + "." + containedObjectInstanceMemeber);
+    logger.info("populateContainedObjects - containedObjectInstanceMemeber: " + containers[0].getClass().getName() + "." + containedObjectInstanceMemeber);
     ContainedObjectField containedObjField = ORMInfoManager.getContainedObjectField(containers[0], containedObjectInstanceMemeber);
     if(containedObjField == null) {
       ORMInfoManager.getContainedObjectFields(containers[0]).forEach(System.out::println);
-      logger.warning("No instance member found with the given name [" + containedObjectInstanceMemeber + "] in class [" + containers[0].getClass().getName() + "].");
+      logger.warning("populateContainedObjects - No instance member found with the given name [" + containedObjectInstanceMemeber + "] in class [" + containers[0].getClass().getName() + "].");
       return;
     } // end of if
     populateContainedObjects(containers, containedObjField, con);
@@ -1265,7 +1273,7 @@ public abstract class AbstractDAO implements DAO {
     sql.append(StringUtils.wrapDBField(primaryKeyDBField, sqlConstants.getFieldPrefix()));
     sql.append(") From ");
     sql.append(StringUtils.wrap(tableName, sqlConstants.getFieldPrefix(), sqlConstants.getFieldSuffix()));
-    logger.info(sql.toString() + ";");
+    logger.info("getNewId - " + sql.toString());
 
     try {
       con = getConnection();
@@ -1395,6 +1403,10 @@ public abstract class AbstractDAO implements DAO {
       String sortBy, int limitStart, int limitSize, List<Join> joins) {
     return createSelectQuery(pojo, level, fields, false, functions, criteria,
         booleanOperator, sortBy, limitStart, limitSize, joins);
+  }
+  
+  public String getFieldNames(Object pojo) {
+    return wrapFields(ORMInfoManager.getQualifiedDBFieldNames(pojo));
   }
   
   /**
@@ -1888,7 +1900,7 @@ public abstract class AbstractDAO implements DAO {
   public Vector<Object[]> executeSelectQuery(String qry, Connection con)
       throws ORMException {
     
-    logger.finest("Entering - Time : " + System.currentTimeMillis());
+    logger.finest("executeSelectQuery - Entering - Time : " + System.currentTimeMillis());
     Vector<Object[]> results = new Vector<Object[]>();
     boolean isNewConnection = false;
     Statement stmt = null;
@@ -1928,7 +1940,7 @@ public abstract class AbstractDAO implements DAO {
         closeConnection(con);
       } // end of if
     } // end of finally
-    logger.finest("Leaving - Time : " + System.currentTimeMillis());
+    logger.finest("executeSelectQuery - Leaving - Time : " + System.currentTimeMillis());
     return results;
   } // end of  method executeSelectQuery
   
@@ -1947,7 +1959,7 @@ public abstract class AbstractDAO implements DAO {
       } // end of if
       stmt = con.createStatement();
       String qry = createSelectQuery(pojo, ORMInfoManager.SUPER_LEVEL);
-      logger.info(qry + ";");
+      logger.info("fillObject - " + qry);
       ResultSet rst = stmt.executeQuery(qry);
       if(rst.next()) {
         fillObject(pojo, rst);
@@ -1973,9 +1985,9 @@ public abstract class AbstractDAO implements DAO {
   } // end of  method fillObject
   
   protected <T> void fillObjects(Collection<T> results, T pojo, ResultSet rst) throws SQLException {
-    logger.finest("Entering - Time : " + System.currentTimeMillis());
+    logger.finest("fillObjects - Entering - Time : " + System.currentTimeMillis());
     List<InstanceMember> instanceMembers = ORMInfoManager.getInstanceMembers(pojo);
-    logger.finest("Retrieved fields of " + pojo.getClass().getName() + " - Time : " + System.currentTimeMillis());
+    logger.finest("fillObjects - Retrieved fields of " + pojo.getClass().getName() + " - Time : " + System.currentTimeMillis());
     if(instanceMembers == null || instanceMembers.size() < 1) {
       return;
     } // end of if
@@ -1986,13 +1998,13 @@ public abstract class AbstractDAO implements DAO {
       fillObject(result, instanceMembers, rst);
       results.add(result);
     }
-    logger.finest("Leaving - Time : " + System.currentTimeMillis());
+    logger.finest("fillObjects - Leaving - Time : " + System.currentTimeMillis());
   }
   /**
    * {@inheritDoc}
    */
   protected void fillObject(Object pojo, ResultSet rst) throws SQLException {
-    logger.finest("Entering - Time : " + System.currentTimeMillis());
+    logger.finest("fillObject - Entering - Time : " + System.currentTimeMillis());
     List<InstanceMember> instanceMembers = null; //ORMInfoManager.getInstanceMembers(pojo);
 //    if(instanceMembers == null || instanceMembers.size() < 1) {
 //      return;
@@ -2004,16 +2016,16 @@ public abstract class AbstractDAO implements DAO {
         break;
       }
       instanceMembers = getMatchingInstanceMembers(rst.getMetaData(), superClass.getName());
-      logger.finest("Retrieved instance members of " + superClass.getName() + " - Time : " + System.currentTimeMillis());
-      logger.finest("About to fill " + superClass.getName() + " members. - Time : " + System.currentTimeMillis());
+      logger.finest("fillObject - Retrieved instance members of " + superClass.getName() + " - Time : " + System.currentTimeMillis());
+      logger.finest("fillObject - About to fill " + superClass.getName() + " members. - Time : " + System.currentTimeMillis());
       fillObject(pojo, instanceMembers, rst);
       pojoClass = superClass;
     }
     instanceMembers = getMatchingInstanceMembers(rst.getMetaData(), pojo.getClass().getName());
-    logger.finest("Retrieved instance members of " + pojo.getClass().getName() + " - Time : " + System.currentTimeMillis());
-    logger.finest("About to fill " + pojo.getClass().getName() + " members. - Time : " + System.currentTimeMillis());
+    logger.finest("fillObject - Retrieved instance members of " + pojo.getClass().getName() + " - Time : " + System.currentTimeMillis());
+    logger.finest("fillObject - About to fill " + pojo.getClass().getName() + " members. - Time : " + System.currentTimeMillis());
     fillObject(pojo, instanceMembers, rst);
-    logger.finest("Leaving - Time : " + System.currentTimeMillis());
+    logger.finest("fillObject - Leaving - Time : " + System.currentTimeMillis());
   } // end of method fillObject
   
   private void fillObject(Object pojo, List<InstanceMember> instanceMembers, ResultSet rst) throws SQLException {
@@ -2024,9 +2036,9 @@ public abstract class AbstractDAO implements DAO {
         value = rst.getObject(instanceMember.getInstanceMemberName());
         Utility.invokeMethod(pojo, instanceMember.getSetterMethod(), new Object[] {value});
       } catch(Exception eee) {
-        logger.warning("Could not set value [" + instanceMember.getInstanceMemberName() + " : " + value + "] in [" + instanceMember.getSetterMethod().getName() + "] method in [" + pojo.getClass().getName() + "] object.");
+        logger.warning("fillObject - Could not set value [" + instanceMember.getInstanceMemberName() + " : " + value + "] in [" + instanceMember.getSetterMethod().getName() + "] method in [" + pojo.getClass().getName() + "] object.");
         StackTraceElement rootCause = eee.getStackTrace()[eee.getStackTrace().length - 1];
-        logger.warning(rootCause.getClassName() + " thrown with message [" + eee.getMessage() + "].");
+        logger.warning("fillObject - " + rootCause.getClassName() + " thrown with message [" + eee.getMessage() + "].");
         logger.warning(rootCause.toString());
         ;
       } // end of catch
@@ -2122,7 +2134,7 @@ public abstract class AbstractDAO implements DAO {
 
   public <T> Collection<T> executeUnionQuery(Object pojo, String[] queries, Connection con) throws SQLException {
     String sql = createUnionQuery(queries);
-    logger.info(sql.toString() + ";");
+    logger.info("executeUnionQuery - " + sql.toString());
     return (Collection<T>)this.executeQuery(sql, pojo.getClass(), pojo, con);
   }
 
@@ -2343,8 +2355,8 @@ public abstract class AbstractDAO implements DAO {
           if (containerObjValue.equals(containedObjValue) == true) {
             try {
               // set contained object in container object.
-              logger.info(containerObjs[i].getClass().getName() + "." + setMethod.getName() + " > " + objectVec.elementAt(j).getClass().getName());
-              logger.info(objectVec.elementAt(j).toString());
+              logger.info("fillContainersSingle - " + containerObjs[i].getClass().getName() + "." + setMethod.getName() + " > " + objectVec.elementAt(j).getClass().getName());
+              logger.info("fillContainersSingle - "+ objectVec.elementAt(j).toString());
               Method setMethodRT = containerObjs[i].getClass().getMethod(setMethod.getName(), new Class[] {objectVec.elementAt(j).getClass()});
               setMethodRT.invoke(containerObjs[i], objectVec.elementAt(j));
 
@@ -2468,7 +2480,7 @@ public abstract class AbstractDAO implements DAO {
   protected Collection fillContainedObjects(Object[] containers, Map inclusions, int level, Connection con, Map fillMap)
       throws ORMException {
 
-    logger.finest("Entering - Time : " + System.currentTimeMillis());
+    logger.finest("fillContainedObjects - Entering - Time : " + System.currentTimeMillis());
     /**
      * 1. Get contained object names whether single or multiple
      * 2. For each type, call fillContainers<Multi/Single> methods.
@@ -2485,7 +2497,7 @@ public abstract class AbstractDAO implements DAO {
     } // end of if
 
     List<ContainedObjectField> containerObjFields = ORMInfoManager.getContainedObjectFields(containers[0]);
-    logger.finest("Count of containerObjGetters is : " + containerObjFields.size());
+    logger.finest("fillContainedObjects - Count of containerObjGetters is : " + containerObjFields.size());
     if(containerObjFields == null || containerObjFields.size() < 1) {
       fillMap = new TreeMap();
       return new Vector();
@@ -2511,13 +2523,13 @@ public abstract class AbstractDAO implements DAO {
     boolean isParent = true;
     
     for (ContainedObjectField containedObjField : containerObjFields) {
-      logger.finer("Retrieving contained field for reference entity [" + containedObjField.getReferencedEntity() + "] and reference field [" + containedObjField.getReferencedField() + "] in class [" + containedObjField.getClassName() + "]");
+      logger.finer("fillContainedObjects - Retrieving contained field for reference entity [" + containedObjField.getReferencedEntity() + "] and reference field [" + containedObjField.getReferencedField() + "] in class [" + containedObjField.getClassName() + "]");
       containedField = ORMInfoManager.getDBField(containedObjField.getContainedObjectType(), containedObjField.getReferencedField());
       if(containedField == null) {
         ORMInfoManager.getPrimaryKeyName(ORMInfoManager.instantiate(containedObjField.getContainedObjectType()));
         containedField = ORMInfoManager.getDBField(containedObjField.getContainedObjectType(), containedObjField.getReferencedField());
       } // end of if
-      logger.finer("Contained field for reference entity [" + containedObjField.getReferencedEntity() + "] and reference field [" + containedObjField.getReferencedField() + "] is [" + containedField.getInstanceMemberName() + "]");
+      logger.finer("fillContainedObjects - Contained field for reference entity [" + containedObjField.getReferencedEntity() + "] and reference field [" + containedObjField.getReferencedField() + "] is [" + containedField.getInstanceMemberName() + "]");
       sortBy = ORMInfoManager.getQualifiedField(containedField.getEntityName(), containedField.getDbFieldName(), true);
       containerField = ORMInfoManager.getFieldByInstanceMemberName(containers[0], containedObjField.getRelatedInstanceMemberName());
       if(containerField != null) {
@@ -2537,9 +2549,9 @@ public abstract class AbstractDAO implements DAO {
         pojo = containedField.getPojo();
         
         storedLevel = (Integer)fillMap.get(containerClassName + "." + containedObjField.getGetterMethod().getName() + "-Level");
-        logger.finest(containerClassName + "." + containedObjField.getGetterMethod().getName() + "-Level : " + storedLevel);
+        logger.finest("fillContainedObjects - " + containerClassName + "." + containedObjField.getGetterMethod().getName() + "-Level : " + storedLevel);
         if(fillMap.containsKey(containerClassName + "." + containedObjField.getGetterMethod().getName()) && storedLevel != null && level >= storedLevel.intValue()) {
-          logger.finest("As the " + containerClassName + "." + containedObjField.getGetterMethod().getName() + " has been found at level : " + storedLevel + ", hence skipping.");
+          logger.finest("fillContainedObjects - As the " + containerClassName + "." + containedObjField.getGetterMethod().getName() + " has been found at level : " + storedLevel + ", hence skipping.");
           continue;
         } // end of if
 
@@ -2547,9 +2559,9 @@ public abstract class AbstractDAO implements DAO {
         
         criteria[0] = criterionFactory.createIn(containedField.getDbFieldName(), containedField.getEntityName(), fieldValues, criterionFactory.getType(containerRelatedFieldValue), null, null);
 
-        logger.finest("About to search contained objects - Time : " + System.currentTimeMillis());
+        logger.finest("fillContainedObjects - About to search contained objects - Time : " + System.currentTimeMillis());
         containedObjs = search(pojo, null, criteria, BOOLEAN_OPERATOR.OR, sortBy, -1, -1, con);
-        logger.finest("Searched contained objects - Time : " + System.currentTimeMillis());
+        logger.finest("fillContainedObjects - Searched contained objects - Time : " + System.currentTimeMillis());
         containedObjArrays.add((Object[])containedObjs.toArray(new Object[0]));
         
         if(Utility.isChildClass(setterParamType, Collection.class) || setterParamType.isArray()) {
@@ -2559,12 +2571,12 @@ public abstract class AbstractDAO implements DAO {
           fillContainersSingle(containers, (Object[])containedObjs.toArray(new Object[0]), containerField, containedField, containedObjField);
         } // end of if
         
-        logger.finest("Filled contained objects in objects of type [" + containers[0].getClass().getName() + "] - Time : " + System.currentTimeMillis());
+        logger.finest("fillContainedObjects - Filled contained objects in objects of type [" + containers[0].getClass().getName() + "] - Time : " + System.currentTimeMillis());
         
         fillMap.put(containerClassName + "." + containedObjField.getGetterMethod().getName(), "true");
         fillMap.put(containerClassName + "." + containedObjField.getGetterMethod().getName() + "-Level", level);
-        logger.finest("putting " + containerClassName + "." + containedObjField.getGetterMethod().getName() + " in fillMap.");
-        logger.finest("putting " + containerClassName + "." + containedObjField.getGetterMethod().getName() + "-Level : " + level + " in fillMap.");
+        logger.finest("fillContainedObjects - putting " + containerClassName + "." + containedObjField.getGetterMethod().getName() + " in fillMap.");
+        logger.finest("fillContainedObjects - putting " + containerClassName + "." + containedObjField.getGetterMethod().getName() + "-Level : " + level + " in fillMap.");
         
         // makes sure that query is not executed for reciprocal contained objects.
         ContainedObjectField reciprocalContainedObjectField = containedObjField.getReciprocalContainedObjectField();
@@ -2572,8 +2584,8 @@ public abstract class AbstractDAO implements DAO {
           fillMap.put(reciprocalContainedObjectField.getClassName() + "." + reciprocalContainedObjectField.getGetterMethod().getName(), "true");
           fillMap.put(reciprocalContainedObjectField.getClassName() + "." + reciprocalContainedObjectField.getGetterMethod().getName() + "-Level", level - 1);
           
-          logger.finest("putting " + reciprocalContainedObjectField.getClassName() + "." + reciprocalContainedObjectField.getGetterMethod().getName() + " in fillMap.");
-          logger.finest("putting " + reciprocalContainedObjectField.getClassName() + "." + reciprocalContainedObjectField.getGetterMethod().getName() + "-Level : " + (level - 1) + " in fillMap.");
+          logger.finest("fillContainedObjects - putting " + reciprocalContainedObjectField.getClassName() + "." + reciprocalContainedObjectField.getGetterMethod().getName() + " in fillMap.");
+          logger.finest("fillContainedObjects - putting " + reciprocalContainedObjectField.getClassName() + "." + reciprocalContainedObjectField.getGetterMethod().getName() + "-Level : " + (level - 1) + " in fillMap.");
         } // end of if
         
         
@@ -2582,26 +2594,43 @@ public abstract class AbstractDAO implements DAO {
         logger.warning(Utility.getStackTrace(ee));
       } // end of catch
     } // end of for
-    logger.finest("Leaving - Time : " + System.currentTimeMillis());
+    logger.finest("fillContainedObjects - Leaving - Time : " + System.currentTimeMillis());
     return containedObjArrays;
   } // end of  method fillContainedObject
   
   
   protected Join getSimpleJoin(String lhsTableAlias, String rhsTableName, String rhsTableAlias, String lhsFieldName, String rhsFieldName, int joinType) {
+    return getSimpleJoin(lhsTableAlias, rhsTableName, rhsTableAlias, lhsFieldName, rhsFieldName, joinType, null, null);
+  }
+  
+  protected Join getSimpleJoin(String lhsTableAlias, String rhsTableName, String rhsTableAlias, String lhsFieldName, String rhsFieldName, int joinType, SQLCriterion[] additionalCriteria, BOOLEAN_OPERATOR operator) {
     FromElement rhs = new FromElement();
     rhs.setTableName(rhsTableName);
     rhs.setAlias(rhsTableAlias);
-    SQLCriterion[] joinCriteria = new SQLCriterion[1];
+    int additionalCriteriaArrayLength = additionalCriteria != null ? additionalCriteria.length : 0;
+    operator = operator != null ? operator : BOOLEAN_OPERATOR.AND;
+    SQLCriterion[] joinCriteria = new SQLCriterion[additionalCriteriaArrayLength + 1];
     joinCriteria[0] = criterionFactory.createColumnComparison(lhsFieldName, lhsTableAlias, SQLCriterion.EQUAL_TO, rhsFieldName, rhsTableAlias);
-    return new Join(null, rhs, joinType, joinCriteria, BOOLEAN_OPERATOR.AND);
+    if(additionalCriteria != null && additionalCriteria.length > 0) {
+      System.arraycopy(additionalCriteria, 0, joinCriteria, 1, additionalCriteriaArrayLength);
+    }
+    return new Join(null, rhs, joinType, joinCriteria, operator);
   }
   
   protected Join getSimpleInnerJoin(String lhsTableAlias, String rhsTableName, String rhsTableAlias, String lhsFieldName, String rhsFieldName) {
-    return getSimpleJoin(lhsTableAlias, rhsTableName, rhsTableAlias, lhsFieldName, rhsFieldName, Join.JOIN_TYPE_INNER);
+    return getSimpleInnerJoin(lhsTableAlias, rhsTableName, rhsTableAlias, lhsFieldName, rhsFieldName, null, null);
+  }
+  
+  protected Join getSimpleInnerJoin(String lhsTableAlias, String rhsTableName, String rhsTableAlias, String lhsFieldName, String rhsFieldName, SQLCriterion[] additionalCriteria, BOOLEAN_OPERATOR operator) {
+    return getSimpleJoin(lhsTableAlias, rhsTableName, rhsTableAlias, lhsFieldName, rhsFieldName, Join.JOIN_TYPE_INNER, additionalCriteria, operator);
   }
   
   protected Join getSimpleLeftJoin(String lhsTableAlias, String rhsTableName, String rhsTableAlias, String lhsFieldName, String rhsFieldName) {
-    return getSimpleJoin(lhsTableAlias, rhsTableName, rhsTableAlias, lhsFieldName, rhsFieldName, Join.JOIN_TYPE_LEFT_OUTER);
+    return getSimpleLeftJoin(lhsTableAlias, rhsTableName, rhsTableAlias, lhsFieldName, rhsFieldName, null, null);
+  }
+  
+  protected Join getSimpleLeftJoin(String lhsTableAlias, String rhsTableName, String rhsTableAlias, String lhsFieldName, String rhsFieldName, SQLCriterion[] additionalCriteria, BOOLEAN_OPERATOR operator) {
+    return getSimpleJoin(lhsTableAlias, rhsTableName, rhsTableAlias, lhsFieldName, rhsFieldName, Join.JOIN_TYPE_LEFT_OUTER, additionalCriteria, operator);
   }
   
 } // end of class AbstractDAO

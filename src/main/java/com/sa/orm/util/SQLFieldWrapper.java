@@ -559,7 +559,14 @@ public class SQLFieldWrapper {
    * Checks if a string is an SQL function name.
    */
   private static boolean isSQLFunction(String token) {
-      return token != null && SQL_FUNCTIONS.contains(token.toUpperCase());
+    if (token == null || !token.contains("(")) return false;
+    // Split by the first parenthesis
+    String[] parts = token.split("\\(", 2);
+    String functionName = parts[0].trim().toUpperCase();
+    
+    return SQL_FUNCTIONS.contains(functionName);
+
+    //return token != null && SQL_FUNCTIONS.contains(token.toUpperCase());
   }
   
   /**
@@ -867,5 +874,7 @@ public class SQLFieldWrapper {
       
       System.out.println("wrapDBField(LOWER(CONCAT(updatedBy.firstName, ' ', updatedBy.lastName)) DESC', '`')): " + 
           wrapDBField("LOWER(CONCAT(updatedBy.firstName, ' ', updatedBy.lastName)) DESC", "`"));
+      System.out.println("wrapDBField('updatedBy.date', '`')): " + 
+          wrapDBField("updatedBy.date", "`"));
   }
 }

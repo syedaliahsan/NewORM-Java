@@ -112,7 +112,7 @@ public class SQLCriterionGroup implements SQLCriterion {
       oper = " Or ";
     } // end of else
 
-    if(this.criteria.size() > 1) sql.append("(");
+    sql.append("(");
     SQLCriterion[] criterionArray = (SQLCriterion[])this.criteria.toArray(new SQLCriterion[0]);
     for (int i = 0; i < criterionArray.length; i++) {
       criterion = criterionArray[i];
@@ -121,7 +121,7 @@ public class SQLCriterionGroup implements SQLCriterion {
         sql.append(oper);
       } // end of if
     } // end of for
-    if(this.criteria.size() > 1) sql.append(")");
+    sql.append(")");
     return sql.toString();
   } // end of method getCriterionString
 
