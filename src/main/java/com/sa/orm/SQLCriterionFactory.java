@@ -176,10 +176,14 @@ public class SQLCriterionFactory {
       default: return null;
     }
   }
+  
+  public SQLCriterion createIn(String fieldName, Collection values, int fieldType) {
+    return createIn(fieldName, null, values, fieldType);
+  }
 
-  // ... (Implementing other methods similarly, using switch)
-  // To avoid excessively large file content in one go, I will provide the FULL implementation structure but condensed slightly where appropriate if redundant.
-  // Actually, I should better provide full implementation for correctness.
+  public SQLCriterion createIn(String fieldName, String tableName, Collection values, int fieldType) {
+    return createIn(fieldName, tableName, values, fieldType, null, null);
+  }
 
   public SQLCriterion createIn(String fieldName, String tableName, Collection values, int fieldType, String dbMask, String javaMask) {
       return createIn(fieldName, tableName, values, fieldType, dbMask, javaMask, false);
@@ -216,6 +220,14 @@ public class SQLCriterionFactory {
       default: return null;
      }
   }
+
+  public SQLCriterion createNotIn(String fieldName, Collection values, int fieldType) {
+    return createNotIn(fieldName, null, values, fieldType);
+}
+
+  public SQLCriterion createNotIn(String fieldName, String tableName, Collection values, int fieldType) {
+    return createNotIn(fieldName, tableName, values, fieldType, null, null);
+}
 
   public SQLCriterion createNotIn(String fieldName, String tableName, Collection values, int fieldType, String dbMask, String javaMask) {
       return createNotIn(fieldName, tableName, values, fieldType, dbMask, javaMask, false);

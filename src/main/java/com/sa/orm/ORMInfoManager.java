@@ -30,6 +30,7 @@ import com.sa.orm.util.ForeignKeyField;
 import com.sa.orm.util.InstanceMember;
 import com.sa.orm.util.ReflectionException;
 import com.sa.orm.util.StringUtils;
+import com.sa.orm.util.TypeCastUtils;
 import com.sa.orm.util.Utility;
 
 /**
@@ -1189,20 +1190,43 @@ public class ORMInfoManager {
    * copied.
    */
   public static void copyFields(Object dest, Object src) {
-    List<DBField> fields = getFields(dest);
-    Object value = null;
-    for (DBField dbField : fields) {
+    List<DBField> srcFields = getFields(src);
+    for (DBField srcField : srcFields) {
       try {
-        value = Utility.invokeMethod(src, dbField.getGetterMethod());
-        Utility.invokeMethod(dest, dbField.getSetterMethod(), new Object[] {value});
-      } catch(Exception eee) {
-        logger.warning("Could not copy [" + dbField.getInstanceMemberName() + "] value from [" + src.getClass().getName() + "] object to [" + dest.getClass().getName() + "] object.");
+        Field field = srcField.getField();
+        if(field == null || (!field.getType().isPrimitive() && !isWrapperClass(field.getType().getName()))) {
+          continue;
+        }
+        Object value = Utility.invokeMethod(src, srcField.getGetterMethod());
+        if(value == null) {
+          continue;
+        }
+        DBField destField = getFieldByInstanceMemberName(dest, srcField.getInstanceMemberName());
+        if(destField == null) {
+          continue;
+        }
+        Field destFieldRef = destField.getField();
+        if(destFieldRef == null || (!destFieldRef.getType().isPrimitive() && !isWrapperClass(destFieldRef.getType().getName()))) {
+          continue;
+        }
+        Class<?> srcFieldType = field.getType();
+        Class<?> destFieldType = destFieldRef.getType();
+        if(destFieldType.isAssignableFrom(srcFieldType)) {
+          Utility.invokeMethod(dest, destField.getSetterMethod(), new Object[] {value});
+        }
+        else if(TypeCastUtils.isBoxingMatch(srcFieldType, destFieldType) || TypeCastUtils.isUnboxingMatch(srcFieldType, destFieldType)) {
+          value = TypeCastUtils.convertValue(value, destFieldType);
+          Utility.invokeMethod(dest, destField.getSetterMethod(), new Object[] {value});
+        }
+      }
+      catch(Exception eee) {
+        logger.warning("Could not copy [" + srcField.getInstanceMemberName() + "] value from [" + src.getClass().getName() + "] object to [" + dest.getClass().getName() + "] object.");
         StackTraceElement rootCause = eee.getStackTrace()[eee.getStackTrace().length - 1];
         logger.warning(rootCause.getClassName() + " thrown with message [" + eee.getMessage() + "].");
         logger.warning(rootCause.toString());
-      } // end of catch
-    } // end of for
-  } // end of method copyFields
+      }
+    }
+  }
 
   /**
    * Returns {@link List} of primary key values of the objects in given array
@@ -1395,15 +1419,16 @@ public class ORMInfoManager {
    * @throws ReflectionException In case the instance member's setter method
    * does not exist or does  not have <code>public</code> access modifier.
    */
-  public static void setInstanceMemberValue(Object pojo, DBField instanceMember, Object value) throws ReflectionException {
-    try {
-      instanceMember.getSetterMethod().invoke(pojo, new Object[] {value});
-    } catch(InvocationTargetException e) {
-      throw new ReflectionException(e);
-    } catch(IllegalAccessException e) {
-      throw new ReflectionException(e);
-    }
-  } // end of method setInstanceMemberValue
+public static void setInstanceMemberValue(Object pojo, DBField instanceMember, Object value) throws ReflectionException {
+     try {
+       Object convertedValue = TypeCastUtils.convertToPrimitiveIfNeeded(instanceMember.getField().getType(), value);
+       instanceMember.getSetterMethod().invoke(pojo, convertedValue);
+     } catch(InvocationTargetException e) {
+       throw new ReflectionException(e);
+     } catch(IllegalAccessException e) {
+       throw new ReflectionException(e);
+     }
+   } // end of method setInstanceMemberValue
 
   /**
    * Sets the value of the all the instance members mapped to foreign keys in
@@ -1428,7 +1453,8 @@ public class ORMInfoManager {
   throws IllegalAccessException, InvocationTargetException {
     List<ForeignKeyField> foreignKeys = getForiengKeyFields(parentObj, pojo, foreignKeyValue.getClass());
     for (ForeignKeyField field : foreignKeys) {
-      field.getSetterMethod().invoke(pojo, new Object[] {foreignKeyValue});
+      Object convertedValue = TypeCastUtils.convertToPrimitiveIfNeeded(field.getField().getType(), foreignKeyValue);
+      field.getSetterMethod().invoke(pojo, convertedValue);
     } // end of for
   } // end of method setForiegnKeyValue
 

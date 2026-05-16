@@ -32,7 +32,7 @@ public interface DAO {
    * Returns a filled object of the type of the given <code>pojo</code>
    * object based on the value of primary key set in it.
    * 
-   * @param <T> Type of the POJO
+   * @param <T> Type of <code>pojo</code>.
    * @param pojo Object having primary key value set and whose clone
    * filled with the database record is to be returned.
    * @param con Connection object to be used to run the query. If
@@ -50,7 +50,7 @@ public interface DAO {
    * Returns a filled object of the type of the given <code>pojo</code>
    * object based on the specified primary key value.
    * 
-   * @param <T> Type of the POJO
+   * @param <T> Type of <code>pojo</code>.
    * @param pojo Object representing the database table
    * @param pkValue Value of the primary key field.
    * @param con Connection object to be used to run the query. If
@@ -68,7 +68,7 @@ public interface DAO {
    * object based on the value of primary key set in it, with only specified
    * fields populated.
    * 
-   * @param <T> Type of the POJO
+   * @param <T> Type of <code>pojo</code>.
    * @param pojo Object having primary key value set and whose clone
    * filled with the database record is to be returned.
    * @param fields Fields to be populated in the returned object.
@@ -92,7 +92,7 @@ public interface DAO {
    * the table fields are retrieved and filled in the returned
    * objects. Otherwise, only the given fields are retrieved and set.
    * 
-   * @param <T> Type of the POJO
+   * @param <T> Type of <code>pojo</code>.
    * @param pojo Object representing a database table which is to be
    * searched.
    * @param fields Fields to be retrieved from database and their
@@ -117,6 +117,44 @@ public interface DAO {
   public <T> Collection<T> search(T pojo, String[] fields,
       SQLCriterion[] criteria, BOOLEAN_OPERATOR booleanOperator, String sortBy, 
       int limitStart, int limitSize, Connection con)
+      throws ORMException;
+
+  /**
+   * Searches the table, represented by given <code>pojo</code> object
+   * against the given <code>criteria</code> and returns records, in
+   * the form of representative objects in a {@link Collection}
+   * object.
+   * If <code>fields</code> is <code>null</code> or zero-length, all
+   * the table fields are retrieved and filled in the returned
+   * objects. Otherwise, only the given fields are retrieved and set.
+   * 
+   * @param <T> Type of returned objects.
+   * @param pojo Object representing a database table which is to be
+   * searched.
+   * @param fields Fields to be retrieved from database and their
+   * values to be set in the returned objects.
+   * @param criteria Criteria to make <code>WHERE</code> clause of
+   * the database query to search specific results. If
+   * <code>null</code>, all the table records are searched.
+   * @param booleanOperator Database <code>AND</code> or <code>OR</code>
+   * operator to be used between the criteria.
+   * @param sortBy Field(s) to sort the returned records with.
+   * @param limitStart First record to be fetched out of the matched
+   * records. If less than 1, it is ignored.
+   * @param limitSize Number of records to be returned, optionally
+   * starting from limitStart.
+   * @param returnType Type of retuned pojos representing records matching the
+   * criteria.
+   * @param con Connection object to be used to run the query. If
+   * <code>null</code>, a new connection is created internally.
+   * @return Collection having objects of type <code>pojo</code> which
+   * matched the given <code>criteria</code> with given or all field
+   * values filled.
+   * @throws ORMException In case of any database or other errors.
+   */
+  public <T> Collection<T> search(Object pojo, String[] fields,
+      SQLCriterion[] criteria, BOOLEAN_OPERATOR booleanOperator, String sortBy, 
+      int limitStart, int limitSize, T returnType, Connection con)
       throws ORMException;
 
   /**
@@ -154,6 +192,45 @@ public interface DAO {
   public <T> Collection<T> search(T pojo, String[] fields,
       SQLCriterion[] criteria, BOOLEAN_OPERATOR booleanOperator, String sortBy, 
       int limitStart, int limitSize, List<Join> joins, Connection con)
+      throws ORMException;
+  
+  /**
+   * Searches the table, represented by given <code>pojo</code> object
+   * against the given <code>criteria</code> and returns records, in
+   * the form of representative objects in a {@link Collection}
+   * object.
+   * If <code>fields</code> is <code>null</code> or zero-length, all
+   * the table fields are retrieved and filled in the returned
+   * objects. Otherwise, only the given fields are retrieved and set.
+   * 
+   * @param <T> Type of returned objects.
+   * @param pojo Object representing a database table which is to be
+   * searched.
+   * @param fields Fields to be retrieved from database and their
+   * values to be set in the returned objects.
+   * @param criteria Criteria to make <code>WHERE</code> clause of
+   * the database query to search specific results. If
+   * <code>null</code>, all the table records are searched.
+   * @param booleanOperator Database <code>AND</code> or <code>OR</code>
+   * operator to be used between the criteria.
+   * @param sortBy Field(s) to sort the returned records with.
+   * @param limitStart First record to be fetched out of the matched
+   * records. If less than 1, it is ignored.
+   * @param limitSize Number of records to be returned, optionally
+   * starting from limitStart.
+   * @param joins List of {@link Join} objects to be used in the query.
+   * @param con Connection object to be used to run the query. If
+   * <code>null</code>, a new connection is created internally.
+   * @param returnType Type of retuned pojos representing records matching the
+   * criteria.
+   * @return Collection having objects of type <code>pojo</code> which
+   * matched the given <code>criteria</code> with given or all field
+   * values filled.
+   * @throws ORMException In case of any database or other errors.
+   */
+  public <T> Collection<T> search(Object pojo, String[] fields,
+      SQLCriterion[] criteria, BOOLEAN_OPERATOR booleanOperator, String sortBy, 
+      int limitStart, int limitSize, List<Join> joins, T returnType, Connection con)
       throws ORMException;
   
   /**
@@ -408,9 +485,29 @@ public interface DAO {
    * @throws ORMException In case of any database errors.
    */
   public PagingVO searchPaging(Object pojo, int level, String[] fields,
-        SQLCriterion[] criteria, BOOLEAN_OPERATOR booleanOperator, String sortBy,
-        int limitStart, int limitSize, List<Join> joins, Connection con)
-    throws ORMException;
+         SQLCriterion[] criteria, BOOLEAN_OPERATOR booleanOperator, String sortBy,
+         int limitStart, int limitSize, List<Join> joins, Connection con)
+     throws ORMException;
+
+  public PagingVO searchPaging(Object pojo, int level, String[] fields,
+         SQLCriterion[] criteria, BOOLEAN_OPERATOR booleanOperator, String sortBy,
+         int limitStart, int limitSize, List<Join> joins, Object returnType, Connection con)
+     throws ORMException;
+
+  public PagingVO searchPaging(Object pojo, String[] fields,
+         SQLCriterion[] criteria, BOOLEAN_OPERATOR booleanOperator, String sortBy,
+         int limitStart, int limitSize, Object returnType, Connection con)
+     throws ORMException;
+
+  public PagingVO searchPaging(Object pojo, String[] fields,
+         SQLCriterion[] criteria, BOOLEAN_OPERATOR booleanOperator, String sortBy,
+         int limitStart, int limitSize, List<Join> joins, Object returnType, Connection con)
+     throws ORMException;
+
+  public PagingVO searchPaging(Object pojo, int level, String[] fields,
+         SQLCriterion[] criteria, BOOLEAN_OPERATOR booleanOperator, String sortBy,
+         int limitStart, int limitSize, Object returnType, Connection con)
+     throws ORMException;
 
   /**
    * Performs a generic search based on the provided search request.
@@ -444,6 +541,14 @@ public interface DAO {
    * @throws NoSuchMethodException If method is not found.
    */
   public PagingVO genericSearch(SearchRequest searchRequest, Object pojo, List<Join> joins)
+      throws ORMException, IllegalAccessException, InstantiationException,
+      InvocationTargetException, NoSuchMethodException;
+
+  public PagingVO genericSearch(SearchRequest searchRequest, Object pojo, Object returnType)
+      throws ORMException, IllegalAccessException, InstantiationException,
+      InvocationTargetException, NoSuchMethodException;
+
+  public PagingVO genericSearch(SearchRequest searchRequest, Object pojo, List<Join> joins, Object returnType)
       throws ORMException, IllegalAccessException, InstantiationException,
       InvocationTargetException, NoSuchMethodException;
   

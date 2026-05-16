@@ -382,7 +382,25 @@ public abstract class AbstractDAO implements DAO {
       SQLCriterion[] criteria, BOOLEAN_OPERATOR booleanOperator, String sortBy, 
       int limitStart, int limitSize, Connection con)
       throws ORMException {
-    return search(pojo, fields, criteria, booleanOperator, sortBy, limitStart, limitSize, null, con);
+    return search(pojo, fields, criteria, booleanOperator, sortBy, limitStart, limitSize, null, pojo, con);
+  }
+
+  @Override
+  public <T> Collection<T> search(Object pojo, String[] fields,
+      SQLCriterion[] criteria, BOOLEAN_OPERATOR booleanOperator, String sortBy, 
+      int limitStart, int limitSize, T returnType, Connection con)
+      throws ORMException {
+    return search(pojo, fields, criteria, booleanOperator, sortBy, limitStart,
+        limitSize, null, returnType, con);
+  }
+
+  @Override
+  public <T> Collection<T> search(T pojo, String[] fields,
+      SQLCriterion[] criteria, BOOLEAN_OPERATOR booleanOperator, String sortBy, 
+      int limitStart, int limitSize, List<Join> joins, Connection con)
+      throws ORMException {
+    return search(pojo, fields, criteria, booleanOperator, sortBy, limitStart,
+        limitSize, joins, pojo, con);
   }
 
   /**
@@ -415,9 +433,9 @@ public abstract class AbstractDAO implements DAO {
    * 
    * @throws ORMException In case of any database or other errors.
    */
-  public <T> Collection<T> search(T pojo, String[] fields,
+  public <T> Collection<T> search(Object pojo, String[] fields,
       SQLCriterion[] criteria, BOOLEAN_OPERATOR booleanOperator, String sortBy, 
-      int limitStart, int limitSize, List<Join> joins, Connection con)
+      int limitStart, int limitSize, List<Join> joins, T returnType, Connection con)
       throws ORMException {
     logger.finest("search - Entering - Time : " + System.currentTimeMillis());
 
@@ -441,7 +459,7 @@ public abstract class AbstractDAO implements DAO {
       Object obj = null;
       while(rst.next()) {
         try {
-          obj = ORMInfoManager.instantiate(pojo.getClass().getName());
+          obj = ORMInfoManager.instantiate(returnType.getClass().getName());
           fillObject(obj, rst);
           records.addElement((T)obj);
         }
@@ -545,6 +563,28 @@ public abstract class AbstractDAO implements DAO {
    */
   public PagingVO searchPaging(Object pojo, String[] fields,
         SQLCriterion[] criteria, BOOLEAN_OPERATOR booleanOperator, String sortBy,
+        int limitStart, int limitSize, Object returnType, Connection con)
+    throws ORMException {
+    
+    return searchPaging(pojo, ORMInfoManager.SUPER_LEVEL, fields, criteria, booleanOperator, sortBy, limitStart, limitSize, returnType, con);
+  }
+  
+  /**
+   * {@inheritDoc}
+   */
+  public PagingVO searchPaging(Object pojo, String[] fields,
+        SQLCriterion[] criteria, BOOLEAN_OPERATOR booleanOperator, String sortBy,
+        int limitStart, int limitSize, List<Join> joins, Object returnTypev, Connection con)
+    throws ORMException {
+    
+    return searchPaging(pojo, ORMInfoManager.SUPER_LEVEL, fields, criteria, booleanOperator, sortBy, limitStart, limitSize, joins, returnTypev, con);
+  }
+  
+  /**
+   * {@inheritDoc}
+   */
+  public PagingVO searchPaging(Object pojo, String[] fields,
+        SQLCriterion[] criteria, BOOLEAN_OPERATOR booleanOperator, String sortBy,
         int limitStart, int limitSize, List<Join> joins, Connection con)
     throws ORMException {
     
@@ -558,20 +598,55 @@ public abstract class AbstractDAO implements DAO {
         SQLCriterion[] criteria, BOOLEAN_OPERATOR booleanOperator, String sortBy,
         int limitStart, int limitSize, Connection con)
     throws ORMException {
-    throw new RuntimeException("Must be implemented by the database specific impl class");
+    return searchPaging(pojo, level, fields, criteria, booleanOperator, sortBy, limitStart, limitSize, pojo, con);
   } 
+
+  public PagingVO searchPaging(Object pojo, int level, String[] fields,
+        SQLCriterion[] criteria, BOOLEAN_OPERATOR booleanOperator, String sortBy,
+        int limitStart, int limitSize, List<Join> joins, Connection con)
+    throws ORMException {
+    return searchPaging(pojo, level, fields, criteria, booleanOperator, sortBy, limitStart, limitSize, joins, pojo, con);
+  }
 
   /**
    * {@inheritDoc}
    */
   public PagingVO searchPaging(Object pojo, int level, String[] fields,
         SQLCriterion[] criteria, BOOLEAN_OPERATOR booleanOperator, String sortBy,
-        int limitStart, int limitSize, List<Join> joins, Connection con)
+        int limitStart, int limitSize, Object returnType, Connection con)
     throws ORMException {
+    return searchPaging(pojo, level, fields, criteria, booleanOperator, sortBy, limitStart, limitSize, null, returnType, con);
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  public PagingVO searchPaging(Object pojo, int level, String[] fields,
+          SQLCriterion[] criteria, BOOLEAN_OPERATOR booleanOperator, String sortBy,
+          int limitStart, int limitSize, List<Join> joins, Object returnType, Connection con)
+      throws ORMException {
     throw new RuntimeException("Must be implemented by the database specific impl class");
   } // end of method searchPaging
 
   public PagingVO genericSearch(SearchRequest searchRequest, Object pojo)
+      throws ORMException,  IllegalAccessException, InstantiationException,
+      InvocationTargetException, NoSuchMethodException {
+    return genericSearch(searchRequest, pojo, pojo);
+  }
+
+  public PagingVO genericSearch(SearchRequest searchRequest, Object pojo, Object returnType)
+      throws ORMException,  IllegalAccessException, InstantiationException,
+      InvocationTargetException, NoSuchMethodException {
+    return genericSearch(searchRequest, pojo, null, returnType);
+  }
+
+  public PagingVO genericSearch(SearchRequest searchRequest, Object pojo,
+      List<Join> joins) throws ORMException,  IllegalAccessException,
+  InstantiationException, InvocationTargetException, NoSuchMethodException {
+    return genericSearch(searchRequest, pojo, joins, pojo);
+  }
+
+  public PagingVO genericSearch(SearchRequest searchRequest, Object pojo, List<Join> joins, Object returnType)
       throws ORMException,  IllegalAccessException, InstantiationException,
       InvocationTargetException, NoSuchMethodException {
     // 1. Build Criteria using the new utility
@@ -586,9 +661,6 @@ public abstract class AbstractDAO implements DAO {
 
     // 3. Handle Pagination limits
     int limitSize = searchRequest.getPageSize();
-    // Convert pageNumber to limitStart (offset + 1 logic depending on your DAO implementation)
-    // AbstractDAO.searchPaging expects limitStart as record index (1-based or 0-based check DAO).
-    // Based on provided AbstractDAO: limitStart is "First record to be fetched".
     int limitStart = ((searchRequest.getPageNumber() - 1) * limitSize) + 1;
 
     if (searchRequest.isIgnoreLimit()) {
@@ -598,64 +670,11 @@ public abstract class AbstractDAO implements DAO {
 
     // 4. Handle Sorting
     String sortBy = searchRequest.getOrderBy(); 
-    // Note: You might need to qualify sortBy with table name if ambiguous, 
-    // or check if sortOrderAscending needs to append " ASC" or " DESC".
     if (!searchRequest.isSortOrderAscending()) {
       sortBy += " DESC";
     }
 
-    // 5. Execute Search via PersistenceManager (which delegates to AbstractDAO)
-    // We use AND as the root operator for the criteria array, 
-    // though our SearchUtil usually returns a single Group node anyway.
-    return searchPaging(
-        pojo,
-        fields,
-        criteria,
-        BOOLEAN_OPERATOR.AND, 
-        sortBy,
-        limitStart,
-        limitSize,
-        null // Connection (null creates new)
-    );
-  }
-
-  public PagingVO genericSearch(SearchRequest searchRequest, Object pojo,
-      List<Join> joins) throws ORMException,  IllegalAccessException,
-  InstantiationException, InvocationTargetException, NoSuchMethodException {
-
-    // 1. Build Criteria using the new utility
-    SQLCriterion[] criteria = SearchUtil.buildCriteria(searchRequest, pojo);
-
-    // 2. Handle Columns
-    String[] fields = null;
-    if (searchRequest.getColumns() != null && !searchRequest.getColumns().isEmpty()) {
-      fields = searchRequest.getColumns().toArray(new String[0]);
-      fields = StringUtils.wrapFields(fields, sqlConstants.getFieldPrefix(), sqlConstants.getFieldSuffix());
-    }
-
-    // 3. Handle Pagination limits
-    int limitSize = searchRequest.getPageSize();
-    // Convert pageNumber to limitStart (offset + 1 logic depending on your DAO implementation)
-    // AbstractDAO.searchPaging expects limitStart as record index (1-based or 0-based check DAO).
-    // Based on provided AbstractDAO: limitStart is "First record to be fetched".
-    int limitStart = ((searchRequest.getPageNumber() - 1) * limitSize) + 1;
-
-    if (searchRequest.isIgnoreLimit()) {
-      limitSize = -1;
-      limitStart = -1;
-    }
-
-    // 4. Handle Sorting
-    String sortBy = searchRequest.getOrderBy(); 
-    // Note: You might need to qualify sortBy with table name if ambiguous, 
-    // or check if sortOrderAscending needs to append " ASC" or " DESC".
-    if (!searchRequest.isSortOrderAscending()) {
-      sortBy += " DESC";
-    }
-
-    // 5. Execute Search via PersistenceManager (which delegates to AbstractDAO)
-    // We use AND as the root operator for the criteria array, 
-    // though our SearchUtil usually returns a single Group node anyway.
+    // 5. Execute Search
     return searchPaging(
         pojo,
         fields,
@@ -665,8 +684,10 @@ public abstract class AbstractDAO implements DAO {
         limitStart,
         limitSize,
         joins,
-        null // Connection (null creates new)
+        returnType,
+        (Connection)null // Connection
     );
+    
   }
   
   public <T> T getFirstByAttributes(T pojo, String[] fields,
@@ -739,11 +760,31 @@ public abstract class AbstractDAO implements DAO {
   } // end of method insert
 
   /**
+   * Inserts a record in the database and populates the resultObj with the
+   * inserted object's fields, including inherited parent object fields.
+   *
+   * @param pojo Object having the field values to be used to insert a new row
+   *        in the database table.
+   * @param resultObj The object to populate with the inserted record's fields.
+   * @param con Connection for transaction control outside this method.
+   * @param returnInsertedObject Whether to return the inserted object.
+   * @param insertContainedParentObjects Whether to insert contained parent objects.
+   * @param insertContainedChildObjects Whether to insert contained child objects.
+   *
+   * @return DbResult containing the inserted object(s).
+   *
+   * @throws ORMException In case of any database or other errors.
+   */
+  public <T> DbResult<T> insert(T pojo, T resultObj, Connection con, boolean returnInsertedObject, boolean insertContainedParentObjects, boolean insertContainedChildObjects) throws ORMException {
+    return insert(pojo.getClass(), pojo, resultObj, con, returnInsertedObject, insertContainedParentObjects, insertContainedChildObjects);
+  } // end of method insert
+
+  /**
    * Inserts the contained parent objects of the given <code>clazz</code> by
    * calling {@link #insert(Class, Object, Connection, boolean, boolean, boolean)}
    * when the primary key value of the parent object is not set.
    * 
-   * @param parentClass {@link Class} to get the structure from. Its structure
+   * @param clazz {@link Class} to get the structure from. Its structure
    * is used to make the <code>INSERT</code> query. It has been separated from
    * <code>pojo</code> to avoid copying fields from the given <code>pojo</code>
    * to its super class object and then copying primary key value from the super 
@@ -761,11 +802,11 @@ public abstract class AbstractDAO implements DAO {
    * 
    * @throws ORMException In case of any underlying database error.
    */
-  protected <T> void insertContainedParentObjects(Class parentClass, T pojo,
-      T resultObj, Connection con, boolean insertContainedParentObjects,
+  protected <T> void insertContainedParentObjects(Class<T> clazz, Object pojo,
+      Object resultObj, Connection con, boolean insertContainedParentObjects,
       boolean insertContainedChildObjects) throws ORMException {
     
-    Collection<ContainedObjectField> containedObjFields = ORMInfoManager.getContainedObjectFields(parentClass);
+    Collection<ContainedObjectField> containedObjFields = ORMInfoManager.getContainedObjectFields(clazz);
     if(containedObjFields == null) return;
     
     for (ContainedObjectField containedObjField : containedObjFields) {
@@ -774,14 +815,18 @@ public abstract class AbstractDAO implements DAO {
       } // end of if
       Object parentObj = Utility.invokeMethod(pojo, containedObjField.getGetterMethod());
       if(parentObj != null && ORMInfoManager.isPrimaryKeyValueSet(parentObj) == false) {
-        logger.finer("insertContainedParentObjects - Inserting parent object [" + parentObj.getClass().getName() + "] of [" + parentClass.getName() + "].");
-        DbResult<T> insertedObj = insert(parentObj.getClass(), (T)parentObj, con, false, insertContainedParentObjects, insertContainedChildObjects);
+        logger.finer("insertContainedParentObjects - Inserting parent object [" + parentObj.getClass().getName() + "] of [" + clazz.getName() + "].");
+        DbResult<T> insertedObj = insert(parentObj.getClass(), (T)parentObj, con, true, insertContainedParentObjects, insertContainedChildObjects);
         
-        DBField relatedInstanceMemberField = ORMInfoManager.getFieldByInstanceMemberName(parentClass, containedObjField.getRelatedInstanceMemberName());
+        DBField relatedInstanceMemberField = ORMInfoManager.getFieldByInstanceMemberName(clazz, containedObjField.getRelatedInstanceMemberName());
         DBField parentField = ORMInfoManager.getDBField(containedObjField.getContainedObjectType(), containedObjField.getReferencedField());
+        // Set PK from parent object into resultObj.
         Object parentFieldValue = Utility.invokeMethod(parentObj, parentField.getGetterMethod());
-        logger.finer("insertContainedParentObjects - Setting foreign key value [" + parentFieldValue + "] in [" + relatedInstanceMemberField.getInstanceMemberName() + "] field of [" + parentClass.getName() + "] object.");
+        logger.finer("insertContainedParentObjects - Setting foreign key value [" + parentFieldValue + "] in [" + relatedInstanceMemberField.getInstanceMemberName() + "] field of [" + clazz.getName() + "] object.");
         Utility.invokeMethod(pojo, relatedInstanceMemberField.getSetterMethod(), new Object[] {parentFieldValue});
+        Utility.invokeMethod(resultObj, relatedInstanceMemberField.getSetterMethod(), new Object[] {parentFieldValue});
+        // TODO Set the inserted parent object in the resultObj
+        Utility.invokeMethod(resultObj, parentField.getSetterMethod(), insertedObj.getEntities().toArray());
       } // end of if
     } // end of for
   } // end of method insertContainedParentObjects
@@ -891,7 +936,7 @@ public abstract class AbstractDAO implements DAO {
           if (childResult.hasEntities()) {
             // Set the inserted child in the result object
             Method setterMethod = containedObjField.getSetterMethod();
-            setterMethod.invoke(resultObj, childResult.getEntities());
+            setterMethod.invoke(resultObj, childResult.getEntities().toArray()[0]);
           }
         } // end of if
       }
@@ -932,6 +977,31 @@ public abstract class AbstractDAO implements DAO {
    * @throws ORMException In case of any database or other errors.
    */
   protected <T> DbResult<T> insert(Class clazz, T pojo, Connection con,
+      boolean returnInsertedObject, boolean insertContainedParentObjects,
+      boolean insertContainedChildObjects) throws ORMException {
+
+    return insert(clazz, pojo, null, con, returnInsertedObject,
+        insertContainedParentObjects, insertContainedChildObjects);
+  } // end of method insert
+
+  /**
+   * Inserts a record in the database corresponding to the given
+   * <code>clazz</code> and populates the resultObj with the inserted record's
+   * fields, including inherited parent object fields.
+   *
+   * @param clazz {@link Class} to read the fields values from.
+   * @param pojo Object having the field values to be used to insert a new row.
+   * @param resultObj The object to populate with the inserted record's fields.
+   * @param con Connection for transaction control outside this method.
+   * @param returnInsertedObject Whether to return the inserted object.
+   * @param insertContainedParentObjects Whether to insert contained parent objects.
+   * @param insertContainedChildObjects Whether to insert contained child objects.
+   *
+   * @return DbResult containing the inserted object(s).
+   *
+   * @throws ORMException In case of any database or other errors.
+   */
+  protected <T> DbResult<T> insert(Class clazz, T pojo, T resultObj, Connection con,
       boolean returnInsertedObject, boolean insertContainedParentObjects,
       boolean insertContainedChildObjects) throws ORMException {
     throw new RuntimeException("Must be implemented by the database specific impl class");
@@ -1182,7 +1252,7 @@ public abstract class AbstractDAO implements DAO {
     if(containers == null || containers.length < 1 || containedObjectInstanceMemeber == null || containedObjectInstanceMemeber.trim().length() < 1) {
       return;
     }
-    logger.info("populateContainedObjects - containedObjectInstanceMemeber: " + containers[0].getClass().getName() + "." + containedObjectInstanceMemeber);
+    logger.finer("populateContainedObjects - containedObjectInstanceMemeber: " + containers[0].getClass().getName() + "." + containedObjectInstanceMemeber);
     ContainedObjectField containedObjField = ORMInfoManager.getContainedObjectField(containers[0], containedObjectInstanceMemeber);
     if(containedObjField == null) {
       ORMInfoManager.getContainedObjectFields(containers[0]).forEach(System.out::println);
@@ -2355,8 +2425,8 @@ public abstract class AbstractDAO implements DAO {
           if (containerObjValue.equals(containedObjValue) == true) {
             try {
               // set contained object in container object.
-              logger.info("fillContainersSingle - " + containerObjs[i].getClass().getName() + "." + setMethod.getName() + " > " + objectVec.elementAt(j).getClass().getName());
-              logger.info("fillContainersSingle - "+ objectVec.elementAt(j).toString());
+              logger.finer("fillContainersSingle - " + containerObjs[i].getClass().getName() + "." + setMethod.getName() + " > " + objectVec.elementAt(j).getClass().getName());
+              logger.finer("fillContainersSingle - "+ objectVec.elementAt(j).toString());
               Method setMethodRT = containerObjs[i].getClass().getMethod(setMethod.getName(), new Class[] {objectVec.elementAt(j).getClass()});
               setMethodRT.invoke(containerObjs[i], objectVec.elementAt(j));
 
@@ -2541,7 +2611,7 @@ public abstract class AbstractDAO implements DAO {
       }
       containerRelatedFieldValue = Utility.invokeMethod(containers[0], containerField.getGetterMethod());
 
-      if(inclusions != null && inclusions.containsKey(containedObjField.getGetterMethod().getName()) == false) {
+      if(inclusions != null && inclusions.containsKey(containedObjField.getInstanceMemberName()) == false) {
         continue;
       } // end of if
       Class setterParamType = containedObjField.getSetterMethod().getParameterTypes()[0];

@@ -6,9 +6,11 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 
 import com.sa.orm.AbstractDAO;
 import com.sa.orm.DbResult;
+import com.sa.orm.Join;
 import com.sa.orm.ORMException;
 import com.sa.orm.ORMInfoManager;
 import com.sa.orm.SQLCriterion;
@@ -38,7 +40,7 @@ public class DAOImpl extends AbstractDAO {
    */
   public PagingVO searchPaging(Object pojo, int level, String[] fields,
         SQLCriterion[] criteria, BOOLEAN_OPERATOR booleanOperator, String sortBy,
-        int limitStart, int limitSize, Connection con)
+        int limitStart, int limitSize, List<Join> joins, Object returnType, Connection con)
     throws ORMException {
 
     PagingVO pg = new PagingVO();
@@ -46,8 +48,8 @@ public class DAOImpl extends AbstractDAO {
     pg.setRowsPerPage(limitSize);
     pg.setSortBy(sortBy);
 
-    String qry = createSelectQuery(pojo, level, fields, criteria,
-        booleanOperator, sortBy, limitStart, limitSize);
+    String qry = createSelectQuery(pojo, level, fields, null, criteria,
+        booleanOperator, sortBy, limitStart, limitSize, joins);
     logger.info(qry + ";");
     ArrayList<Object> records = new ArrayList();
 
@@ -65,7 +67,7 @@ public class DAOImpl extends AbstractDAO {
       Object obj = null;
       while(rst.next()) {
         try {
-          obj = ORMInfoManager.instantiate(pojo.getClass().getName());
+          obj = ORMInfoManager.instantiate(returnType.getClass().getName());
           fillObject(obj, rst);
           records.add(obj);
         } catch(Exception e){}
@@ -130,10 +132,33 @@ public class DAOImpl extends AbstractDAO {
   protected <T> DbResult<T> insert(Class clazz, T pojo, Connection con,
       boolean returnAffectedObject, boolean insertContainedParentObjects,
       boolean insertContainedChildObjects) throws ORMException {
+    T resultObjInstance = (T)ORMInfoManager.instantiate(clazz.getName());
+    return insert(clazz, pojo, resultObjInstance, con, returnAffectedObject, insertContainedParentObjects, insertContainedChildObjects);
+  } // end of method insert
+
+  /**
+   * Inserts a record in the database and populates the resultObj with the
+   * inserted object's fields, including inherited parent object fields.
+   *
+   * @param clazz {@link Class} to read the fields values from.
+   * @param pojo Object having the field values to be used to insert a new row.
+   * @param resultObj The object to populate with the inserted record's fields.
+   * @param con Connection for transaction control outside this method.
+   * @param returnAffectedObject Whether to return the affected object.
+   * @param insertContainedParentObjects Whether to insert contained parent objects.
+   * @param insertContainedChildObjects Whether to insert contained child objects.
+   *
+   * @return DbResult containing the inserted object(s).
+   *
+   * @throws ORMException In case of any database or other errors.
+   */
+  protected <T> DbResult<T> insert(Class clazz, T pojo, T resultObj, Connection con,
+      boolean returnAffectedObject, boolean insertContainedParentObjects,
+      boolean insertContainedChildObjects) throws ORMException {
 
     boolean isNewConnection = false;
-    T insertedObj = (T)ORMInfoManager.instantiate(clazz.getName());
-    DbResult<T> resultObj = null;
+    T insertedObj = resultObj;
+    DbResult<T> dbResult = null;
     Object previousPKValue = ORMInfoManager.getPrimaryKeyValue(pojo);
     Object pkValue = previousPKValue;
 
@@ -158,32 +183,37 @@ public class DAOImpl extends AbstractDAO {
         if(inheritPK) {
           // When inheritPK is true, the child uses parent's PK
           // First check if parent exists and needs to be inserted
-          String superClassPKName = ORMInfoManager.getPrimaryKeyName(superClass.getName());
-          logger.finer("Super class [" + superClass.getName() + "] PK name: " + superClassPKName);
+//          String superClassPKName = ORMInfoManager.getPrimaryKeyName(superClass.getName());
+//          logger.finer("Super class [" + superClass.getName() + "] PK name: " + superClassPKName);
           if(ORMInfoManager.isInstanceMemberValueSet(pojo, ORMInfoManager.getPrimaryKeyField(superClass.getName())) == false) {
             logger.finer("About to insert super object of type [" + superClass.getName() + "] for [" + clazz.getName() + "].");
-            DbResult<T> insertedParentObj = insert(superClass, pojo, con, true, insertContainedParentObjects, insertContainedChildObjects);
+            DbResult<T> insertedParentObj = insert(superClass, pojo, insertedObj, con, true, insertContainedParentObjects, insertContainedChildObjects);
             Object insertedSuperObject = insertedParentObj.getEntities().toArray()[0];
             logger.finer("insertedSuperObject : " + insertedSuperObject.toString());
-            Object insertedObjPKValue = ORMInfoManager.getPrimaryKeyValue(superClass, insertedSuperObject);
+            Object insertedObjPKValue = ORMInfoManager.getPrimaryKeyValue(insertedSuperObject);
+            //Object insertedObjPKValue = ORMInfoManager.getPrimaryKeyValue(superClass, insertedSuperObject);
             // Set the inherited PK in the child object
-            DBField pkField = ORMInfoManager.getFieldByInstanceMemberName(pojo, superClassPKName);
+            //DBField pkField = ORMInfoManager.getFieldByInstanceMemberName(superClass, superClassPKName);
+            DBField pkField = ORMInfoManager.getPrimaryKeyField(clazz.getName());
             if(pkField != null) {
               ORMInfoManager.setInstanceMemberValue(pojo, pkField, insertedObjPKValue);
               logger.finer("Set inherited PK [" + insertedObjPKValue + "] in field [" + pkField.getInstanceMemberName() + "] of [" + clazz.getName() + "] object.");
-            } else {
-              logger.warning("Could not find inherited PK field [" + superClassPKName + "] in [" + clazz.getName() + "]");
+            }
+            else {
+              logger.warning("Could not find PK field in [" + clazz.getName() + "]");
             }
           }
-        } else {
+        }
+        else {
           // Traditional inheritance: insert parent and set FK in child
           if(ORMInfoManager.isInstanceMemberValueSet(pojo, ORMInfoManager.getPrimaryKeyField(superClass.getName())) == false) {
             logger.finer("About to insert super object of type [" + superClass.getName() + "] for [" + clazz.getName() + "].");
-            DbResult<T> insertedParentObj = insert(superClass, pojo, con, true, insertContainedParentObjects, insertContainedChildObjects);
-            Object insertedSuperObject = insertedParentObj.getEntities().toArray()[0];
+            DbResult<T> insertedParentObjResult = insert(superClass, pojo, insertedObj, con, true, insertContainedParentObjects, insertContainedChildObjects);
+            Object insertedSuperObject = insertedParentObjResult.getEntities().toArray()[0];
             logger.finer("insertedSuperObject : " + insertedSuperObject.toString());
             Object insertedObjPKValue = ORMInfoManager.getPrimaryKeyValue(superClass, insertedSuperObject);
-            DBField pkField = ORMInfoManager.getPrimaryKeyField(pojo.getClass().getName());
+            //DBField pkField = ORMInfoManager.getPrimaryKeyField(pojo.getClass().getName());
+            DBField pkField = ORMInfoManager.getPrimaryKeyField(clazz.getName());
             ORMInfoManager.setInstanceMemberValue(pojo, pkField, insertedObjPKValue);
             logger.finer("To be inserted object after setting the super PK: " + pojo.toString());
           }
@@ -221,15 +251,18 @@ public class DAOImpl extends AbstractDAO {
       String sql = createInsertQuery(clazz, pojo);
       logger.info(sql + ";");
       if(returnAffectedObject || insertContainedChildObjects) {
-        resultObj = new DbResult<T>((Collection<T>)this.executeQuery(sql, clazz, pojo, con));
-        logger.info("ResultObject has " + resultObj.getEntities().size() + " records");
-        insertedObj = resultObj.hasEntities() ? (T)resultObj.getEntities().toArray()[0] : insertedObj;
+        T insertedObj1 = (T)((Collection<T>)this.executeQuery(sql, clazz, pojo, con)).toArray()[0];
+        logger.finer("Inserted object: " + insertedObj1);
+        logger.finer("About to copy fields from " + insertedObj1.getClass().getName() + " class object into " + insertedObj.getClass().getName() + " class object");
+        ORMInfoManager.copyFields(insertedObj, insertedObj1);
+        logger.finer("insertedObj containing parent fields as well " + insertedObj.toString());
         pkValue = ORMInfoManager.getPrimaryKeyValue(insertedObj);
-        logger.info("Id of the ResultObject is " + pkValue);
+        dbResult = new DbResult<T>(insertedObj);
+        logger.finer("Id of the ResultObject is " + pkValue);
       }
       else {
         int affectedCount = this.executeUpdate(sql, pojo, con);
-        resultObj = new DbResult<T>(affectedCount);
+        dbResult = new DbResult<T>(affectedCount);
       }
       logger.finer("Inserted [" + clazz.getName() + "] object with primary key field value [" + pkValue + "] successfully.");
 
@@ -259,7 +292,7 @@ public class DAOImpl extends AbstractDAO {
         } catch(Exception ee) {}
       }
     }
-    return resultObj;
+    return dbResult;
   } // end of method insert
 
   /**
