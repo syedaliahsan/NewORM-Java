@@ -253,13 +253,28 @@ public class SQLCriterionFactoryImpl extends SQLCriterionFactory {
   }
   
   @Override
-  protected SQLCriterion createSubQueryCriterion(int operator, String fieldName,
+  public SQLCriterion createSubQueryCriterion(int operator, String fieldName,
+      String tableName, String subQuery) {
+     return new SQLSubQueryCriterion(operator, fieldName, tableName, subQuery, false);
+  }
+
+  @Override
+  public SQLCriterion createSubQueryCriterion(int operator, String fieldName,
       String tableName, String subQuery, boolean compareNull) {
      return new SQLSubQueryCriterion(operator, fieldName, tableName, subQuery, compareNull);
   }
 
   @Override
-  protected SQLCriterion createSubQueryCriterion(int operator, String fieldName,
+  public SQLCriterion createSubQueryCriterion(int operator, String fieldName,
+      String tableName, String subQueryField, String subQueryTable) {
+    
+     return new SQLSubQueryCriterion(operator, fieldName, tableName,
+         subQueryField, subQueryTable, null, null, BOOLEAN_OPERATOR.AND,
+         false);
+  }
+
+  @Override
+  public SQLCriterion createSubQueryCriterion(int operator, String fieldName,
       String tableName, String subQueryField, String subQueryTable,
       String dbMask, SQLCriterion[] criteria, BOOLEAN_OPERATOR booleanOperator,
       boolean compareNull) {

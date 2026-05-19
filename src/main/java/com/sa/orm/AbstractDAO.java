@@ -1872,7 +1872,7 @@ public abstract class AbstractDAO implements DAO {
         wrapperPrefix = wrapperSuffix = "";
         if(value instanceof String) {
           wrapperPrefix = wrapperSuffix = sqlConstants.getStringWrapper();
-          if(value != null && "".equals(value.toString())) {
+          if(dbField.isNullable() && value != null && "".equals(value.toString())) {
             value = null;
           } // end of if
           else {
@@ -1881,7 +1881,7 @@ public abstract class AbstractDAO implements DAO {
         } // end of if
         else if(value instanceof Integer || value instanceof Long) {
           wrapperPrefix = wrapperSuffix = sqlConstants.getNumberWrapper();
-          if(value != null && "0".equals(value.toString())) {
+          if(dbField.isNullable() && value != null && "0".equals(value.toString())) {
             value = null;
           } // end of if
         } // end of if
@@ -1892,7 +1892,7 @@ public abstract class AbstractDAO implements DAO {
         } // end of if
         else if(value instanceof Float || value instanceof Double) {
           wrapperPrefix = wrapperSuffix = sqlConstants.getNumberWrapper();
-          if(value != null && "0.0".equals(value.toString())) {
+          if(dbField.isNullable() && value != null && "0.0".equals(value.toString())) {
             value = null;
           } // end of if
         } // end of if

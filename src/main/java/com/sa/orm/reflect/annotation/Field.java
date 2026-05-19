@@ -103,4 +103,16 @@ public @interface Field {
 	 */
 	public String defaultValue() default "";
 	
+	/**
+	 * Returns <code>true</code> if the field is nullable,
+	 * <code>false</code> otherwise.
+	 * <p>Nullable means that the field value in the database can be null. When
+	 * <code>false</code>, the insert/update statements would set it to the
+	 * non-null value i.e. 0 for int and empty string for String unless the
+	 * instance member <code>null</code>.</p>
+	 * 
+	 * @return Whether or not the value for this field is required?
+	 */
+	public boolean nullable() default true;
+	
 } // end of annotation Field

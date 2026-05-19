@@ -105,6 +105,16 @@ public interface SQLCriterion {
   public static final int DOES_NOT_END_WITH = 18;
 
   /**
+   * Constants value for database operator 'exists'.
+   */
+  public static final int EXISTS = 19;
+
+  /**
+   * Constants value for database operator 'not exists'.
+   */
+  public static final int NOT_EXISTS = 20;
+
+  /**
    * Constants value for boolean operator 'And'.
    */
   public static enum BOOLEAN_OPERATOR {

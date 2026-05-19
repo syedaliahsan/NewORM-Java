@@ -41,6 +41,8 @@ public class DBField extends InstanceMember {
    */
   protected String constraintName;
 
+  protected boolean isNullable = true;
+  
   /**
    * Initializes this object with given values.
    * 
@@ -63,10 +65,24 @@ public class DBField extends InstanceMember {
    * @param constraintName Name of the constraint in the database.
    */
   public DBField(Object pojo, Field field, String entityName, String dbFieldName, String constraintName) {
+    this(pojo, field, entityName, dbFieldName, constraintName, true);
+  } // end of constructor
+  
+  /**
+   * Initializes this object with given values.
+   * 
+   * @param pojo Object containing this field.
+   * @param field {@link Field} object representing this field.
+   * @param entityName Database name (table) of <code>pojo</code>.
+   * @param dbFieldName Name of database table column of this field.
+   * @param constraintName Name of the constraint in the database.
+   */
+  public DBField(Object pojo, Field field, String entityName, String dbFieldName, String constraintName, boolean isNullable) {
     super(pojo, field);
     this.entityName = entityName;
     this.dbFieldName = dbFieldName;
     this.constraintName = constraintName;
+    this.isNullable = isNullable;
   } // end of constructor
   
   /**
@@ -122,6 +138,10 @@ public class DBField extends InstanceMember {
     this.constraintName = constraintName;
   }
   
+  public boolean isNullable() {
+    return isNullable;
+  }
+
   /**
    * Getter {@link Method} of this field.
    * 

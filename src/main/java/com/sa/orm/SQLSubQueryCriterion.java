@@ -119,7 +119,7 @@ public class SQLSubQueryCriterion implements SQLCriterion {
    * <code>criteria</code>.
    * @return SQL query.
    */
-  protected String createSubQuery(String fieldName, String tableName, String dbMask,
+  public String createSubQuery(String fieldName, String tableName, String dbMask,
       SQLCriterion[] criteria, BOOLEAN_OPERATOR booleanOperator) {
     StringBuffer qry = new StringBuffer(ORMInfoManager.sqlConstantsObj.getClauseSelect());
     if(dbMask != null && dbMask.trim().length() > 0) {
@@ -156,84 +156,102 @@ public class SQLSubQueryCriterion implements SQLCriterion {
    * <code>Where</code> clause of an SQL statement.
    */
   public String getCriterionString() {
-    StringBuffer criterionString = new StringBuffer("(");
-    if(StringUtils.getNull(dbMask) != null) {
-      criterionString.append("(Str_To_Date(Date_Format(");
-      if(tableName != null && tableName.length() > 0) {
-        criterionString.append(tableName);
-        criterionString.append(".");
-      } // end of if
-      criterionString.append(fieldName);
-      criterionString.append(", '");
-      criterionString.append(dbMask);
-      criterionString.append("')");
-      criterionString.append(", '");
-      criterionString.append(dbMask);
-      criterionString.append("')");
-    } // end of if
+    StringBuffer criterionString = new StringBuffer("");
+
+    if(operator == EXISTS || operator == NOT_EXISTS) {
+      if(operator == EXISTS) {
+        criterionString.append("Exists (");
+        criterionString.append(subQuery);
+        criterionString.append(")");
+      }
+      else {
+        criterionString.append("Not Exists (");
+        criterionString.append(subQuery);
+        criterionString.append(")");
+      }
+    }
     else {
-      if(tableName != null && tableName.length() > 0) {
-        criterionString.append(tableName);
-        criterionString.append(".");
+      if(StringUtils.getNull(dbMask) != null) {
+        criterionString.append("(Str_To_Date(Date_Format(");
+        appendField(criterionString);
+        criterionString.append(", '");
+        criterionString.append(dbMask);
+        criterionString.append("')");
+        criterionString.append(", '");
+        criterionString.append(dbMask);
+        criterionString.append("')");
       } // end of if
-      criterionString.append(fieldName);
-    } // end of else
-    criterionString.append(" ");
-    switch(operator) {
-      case EQUAL_TO:
-        criterionString.append("= (");
-        criterionString.append(subQuery);
-        criterionString.append(")");
-        break;
-      case NOT_EQUAL_TO:
-        criterionString.append("<> (");
-        criterionString.append(subQuery);
-        criterionString.append(")");
-        break;
-      case LESS_THAN:
-        criterionString.append("< (");
-        criterionString.append(subQuery);
-        criterionString.append(")");
-        break;
-      case LESS_THAN_EQUAL_TO:
-        criterionString.append("<= (");
-        criterionString.append(subQuery);
-        criterionString.append(")");
-        break;
-      case GREATER_THAN:
-        criterionString.append("> (");
-        criterionString.append(subQuery);
-        criterionString.append(")");
-        break;
-      case GREATER_THAN_EQUAL_TO:
-        criterionString.append(">= (");
-        criterionString.append(subQuery);
-        criterionString.append(")");
-        break;
-      case IN:
-        criterionString.append("In (");
-        criterionString.append(subQuery);
-        criterionString.append(")");
-        break;
-      case NOT_IN:
-        criterionString.append("Not In (");
-        criterionString.append(subQuery);
-        criterionString.append(")");
-        break;
-      default:
-        break;
-    } // end of switch
-    if(this.compareNull == true) {
-      criterionString.append(" Or ");
-      if(tableName != null && tableName.length() > 0) {
-        criterionString.append(tableName);
-        criterionString.append(".");
+      else {
+        criterionString.append("(");
+        appendField(criterionString);
+      } // end of else
+      criterionString.append(" ");
+      switch(operator) {
+        case EQUAL_TO:
+          criterionString.append("= (");
+          criterionString.append(subQuery);
+          criterionString.append(")");
+          break;
+        case NOT_EQUAL_TO:
+          criterionString.append("<> (");
+          criterionString.append(subQuery);
+          criterionString.append(")");
+          break;
+        case LESS_THAN:
+          criterionString.append("< (");
+          criterionString.append(subQuery);
+          criterionString.append(")");
+          break;
+        case LESS_THAN_EQUAL_TO:
+          criterionString.append("<= (");
+          criterionString.append(subQuery);
+          criterionString.append(")");
+          break;
+        case GREATER_THAN:
+          criterionString.append("> (");
+          criterionString.append(subQuery);
+          criterionString.append(")");
+          break;
+        case GREATER_THAN_EQUAL_TO:
+          criterionString.append(">= (");
+          criterionString.append(subQuery);
+          criterionString.append(")");
+          break;
+        case IN:
+          criterionString.append("In (");
+          criterionString.append(subQuery);
+          criterionString.append(")");
+          break;
+        case NOT_IN:
+          criterionString.append("Not In (");
+          criterionString.append(subQuery);
+          criterionString.append(")");
+          break;
+        default:
+          break;
+      } // end of switch
+      
+      if(this.compareNull == true) {
+        criterionString.append(" Or ");
+        appendField(criterionString);
+        criterionString.append(" Is Null");
       } // end of if
-      criterionString.append(fieldName);
-      criterionString.append(" Is Null");
-    } // end of if
-    criterionString.append(")");
+      criterionString.append(")");
+    }
     return criterionString.toString();
   } // end of method getCriterionString
+
+  /**
+   * Appends the field name (and table name if present) to the given StringBuffer.
+   * Can be overridden to apply wrapping/quoting.
+   */
+  protected void appendField(StringBuffer criterionString) {
+
+    if(tableName != null && tableName.length() > 0) {
+      criterionString.append(tableName);
+      criterionString.append(".");
+    } // end of if
+    criterionString.append(fieldName);
+  }
 
 } // end of class SQLSubQueryCriterion

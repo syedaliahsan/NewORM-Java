@@ -2,6 +2,7 @@ package com.sa.orm.pgsql.v4;
 
 import com.sa.orm.ORMInfoManager;
 import com.sa.orm.SQLCriterion;
+import com.sa.orm.util.StringUtils;
 
 /**
  * <h4>Description</h4>Represents sub query type field criterion.
@@ -62,40 +63,45 @@ public class SQLSubQueryCriterion extends com.sa.orm.SQLSubQueryCriterion {
   public SQLSubQueryCriterion(int operator, String fieldName, String tableName,
       String subQueryField, String subQueryTable, String dbMask,
       SQLCriterion[] criteria, BOOLEAN_OPERATOR booleanOperator, boolean compareNull) {
-      
+
       super(operator, fieldName, tableName, subQueryField, subQueryTable, dbMask, criteria, booleanOperator, compareNull);
   } // end of constructor
 
   @Override
-  protected String createSubQuery(String fieldName, String tableName, String dbMask,
+  public String createSubQuery(String fieldName, String tableName, String dbMask,
       SQLCriterion[] criteria, BOOLEAN_OPERATOR booleanOperator) {
+    String wrappedField = StringUtils.wrapDBField(tableName, fieldName, SQLConstants.FIELD_PREFIX, SQLConstants.FIELD_SUFFIX, SQLConstants.QUALIFIER_SEPARATOR);
+    String wrappedTable = StringUtils.wrapDBField(null, tableName, SQLConstants.FIELD_PREFIX, SQLConstants.FIELD_SUFFIX, SQLConstants.QUALIFIER_SEPARATOR);
+
     StringBuffer qry = new StringBuffer(SQLConstants.CLAUSE_SELECT_BARE);
     if(dbMask != null && dbMask.trim().length() > 0) {
-      // PostgreSQL specific date conversion if needed
       qry.append("to_date(to_char(");
-      qry.append(fieldName);
+      qry.append(wrappedField);
       qry.append(", '");
       qry.append(dbMask);
       qry.append("') ");
       qry.append(", '");
       qry.append(dbMask);
       qry.append("') ");
-    } // end of if
+    }
     else {
-      qry.append(fieldName);
+      qry.append(wrappedField);
       qry.append(" ");
-    } // end of else
-    
-    qry.append(SQLConstants.CLAUSE_FROM);
-    qry.append(tableName);
-    qry.append(" ");
-    
+    }
+
+    qry.append(SQLConstants.QRY_FROM.format(new Object[] {wrappedTable}));
+
     if(criteria != null && criteria.length > 0) {
+      qry.append(" ");
       qry.append(SQLConstants.CLAUSE_WHERE);
       qry.append(ORMInfoManager.sqlCriterionFactory.createCriteriaString(criteria, booleanOperator));
-    } // end of if
+    }
 
     return qry.toString();
   }
 
+  @Override
+  protected void appendField(StringBuffer criterionString) {
+    criterionString.append(StringUtils.wrapDBField(tableName, fieldName, SQLConstants.FIELD_PREFIX, SQLConstants.FIELD_SUFFIX, SQLConstants.QUALIFIER_SEPARATOR));
+  }
 } // end of class SQLSubQueryCriterion

@@ -6,6 +6,7 @@ import java.sql.Timestamp;
 import java.util.Collection;
 
 import com.sa.orm.SQLCriterion.BOOLEAN_OPERATOR;
+import com.sa.orm.pgsql.v4.SQLSubQueryCriterion;
 
 /**
  * <h4>Description</h4>Provides methods to get child classes of
@@ -81,6 +82,11 @@ public class SQLCriterionFactory {
 
   public static final int BOOLEAN = 11;
   
+  /**
+   * Representing Column data type of the underlying child class.
+   */
+  public static final int SUB_QUERY = 12;
+
   protected SQLCriterionFactory() {
   }
 
@@ -538,18 +544,29 @@ public class SQLCriterionFactory {
      return new SQLTimeStampCriterion(operator, fieldName, tableName, values, dbMask, javaMask, compareNull); 
   }
   
-  protected SQLCriterion createSubQueryCriterion(int operator, String fieldName, String tableName, String subQuery, boolean compareNull) {
-     return new SQLSubQueryCriterion(operator, fieldName, tableName, subQuery, compareNull);
-  }
-
   public SQLCriterion createColumnComparison(String lhsFieldName, String lhsTableName, int operator, String rhsFieldName, String rhsTableName) {
     return new SQLColumnCriterion(operator, lhsFieldName, lhsTableName, rhsFieldName, rhsTableName);
   }
 
-  protected SQLCriterion createSubQueryCriterion(int operator, String fieldName, String tableName, String subQueryField, String subQueryTable,
-                         String dbMask, SQLCriterion[] criteria, BOOLEAN_OPERATOR booleanOperator,
-                         boolean compareNull) {
-     return new SQLSubQueryCriterion(operator, fieldName, tableName, subQueryField, subQueryTable, dbMask, criteria, booleanOperator, compareNull);
+  public SQLCriterion createSubQueryCriterion(int operator, String fieldName, String tableName, String subQuery) {
+    return new SQLSubQueryCriterion(operator, fieldName, tableName, subQuery, false);
+ }
+
+  public SQLCriterion createSubQueryCriterion(int operator, String fieldName, String tableName, String subQuery, boolean compareNull) {
+    return new SQLSubQueryCriterion(operator, fieldName, tableName, subQuery, compareNull);
+ }
+
+  public SQLCriterion createSubQueryCriterion(int operator, String fieldName,
+      String tableName, String subQueryField, String subQueryTable) {
+    
+     return new SQLSubQueryCriterion(operator, fieldName, tableName,
+         subQueryField, subQueryTable, null, null, BOOLEAN_OPERATOR.AND,
+         false);
   }
 
+  public SQLCriterion createSubQueryCriterion(int operator, String fieldName, String tableName,
+      String subQueryField, String subQueryTable, String dbMask, SQLCriterion[] criteria, 
+      BOOLEAN_OPERATOR booleanOperator, boolean compareNull) {
+    return new SQLSubQueryCriterion(operator, fieldName, tableName, subQueryField, subQueryTable, dbMask, criteria, booleanOperator, compareNull);
+  }
 }

@@ -28,20 +28,29 @@ public class SQLCriterionFactoryImpl extends SQLCriterionFactory {
   } // end of no-argument constructor
 
   @Override
-  protected SQLCriterion createTimeStampCriterion(int operator, String fieldName, String tableName, Timestamp[] values, String dbMask, String javaMask, boolean compareNull) {
+  public SQLCriterion createTimeStampCriterion(int operator, String fieldName, String tableName,
+      Timestamp[] values, String dbMask, String javaMask, boolean compareNull) {
      return new SQLTimeStampCriterion(operator, fieldName, tableName, values, dbMask, javaMask, compareNull); 
   }
   
   @Override
-  protected SQLCriterion createSubQueryCriterion(int operator, String fieldName, String tableName, String subQuery, boolean compareNull) {
+  public SQLCriterion createSubQueryCriterion(int operator, String fieldName, String tableName,
+      String subQuery) {
+     return new SQLSubQueryCriterion(operator, fieldName, tableName, subQuery, false);
+  }
+
+  @Override
+  public SQLCriterion createSubQueryCriterion(int operator, String fieldName, String tableName,
+      String subQuery, boolean compareNull) {
      return new SQLSubQueryCriterion(operator, fieldName, tableName, subQuery, compareNull);
   }
 
   @Override
-  protected SQLCriterion createSubQueryCriterion(int operator, String fieldName, String tableName, String subQueryField, String subQueryTable,
-                         String dbMask, SQLCriterion[] criteria, BOOLEAN_OPERATOR booleanOperator,
-                         boolean compareNull) {
-     return new SQLSubQueryCriterion(operator, fieldName, tableName, subQueryField, subQueryTable, dbMask, criteria, booleanOperator, compareNull);
+  public SQLCriterion createSubQueryCriterion(int operator, String fieldName, String tableName,
+      String subQueryField, String subQueryTable, String dbMask, SQLCriterion[] criteria,
+      BOOLEAN_OPERATOR booleanOperator, boolean compareNull) {
+     return new SQLSubQueryCriterion(operator, fieldName, tableName, subQueryField, subQueryTable,
+         dbMask, criteria, booleanOperator, compareNull);
   }
 
 } // end of class SQLCriterionFactoryImpl

@@ -978,12 +978,12 @@ public class ORMInfoManager {
         if(annoField.name() != null && annoField.name().trim().length() > 0) {
           dbFieldName = annoField.name();
         } // end of if
-        dbField = new DBField(pojo, fd, entityName, dbFieldName);
+        dbField = new DBField(pojo, fd, entityName, dbFieldName, null, annoField.nullable());
       }
 
       if(annoPK != null) {
         if(dbField == null) {
-          dbField = new DBField(pojo, fd, entityName, columnName);
+          dbField = new DBField(pojo, fd, entityName, columnName, null, annoField.nullable());
         }
         dbField.setConstraintName(annoPK.constraintName());
 
@@ -991,7 +991,7 @@ public class ORMInfoManager {
       } // end of if
       if(annoUnique != null) {
         if(dbField == null) {
-          dbField = new DBField(pojo, fd, entityName, columnName);
+          dbField = new DBField(pojo, fd, entityName, columnName, null, annoField.nullable());
         }
         if(annoUnique.constraintName() != null && annoUnique.constraintName().trim().length() > 0) {
           dbField.setConstraintName(annoUnique.constraintName());
@@ -1082,7 +1082,9 @@ public class ORMInfoManager {
                         pojo,
                         parentField.getField(),
                         entityName,
-                        parentField.getDbFieldName()
+                        parentField.getDbFieldName(),
+                        parentField.getConstraintName(),
+                        parentField.isNullable()
                     );
                     dbFields.add(inheritedField);
                     instanceMembers.add(inheritedField);
