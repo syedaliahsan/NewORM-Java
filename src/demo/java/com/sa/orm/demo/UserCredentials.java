@@ -12,27 +12,31 @@ import com.sa.orm.reflect.annotation.Unique;
 @SuppressWarnings("serial")
 @Entity(name = "UserCredentials")
 public class UserCredentials extends AbstractVO {
-	
+
+  /**
+   * Primary key - also serves as foreign key to User table.
+   * Database column name: userId (same as instance member name).
+   */
   @Field(minValue = 1, required = true)
   @PrimaryKey
   @ForeignKey(referenceEntity = "User", referencedField = "id")
-  private Integer userId;
-	
+  private long userId;
+
 	@Field(required = true, type = Field.Type.VARIABLE_LENGTH_TEXT, maxLength = 20)
 	@Unique
 	private String username;
-	
+
 	@Field(required = true, type = Field.Type.VARIABLE_LENGTH_TEXT, maxLength = 20)
 	private String password;
-	
+
 	@ContainedObject(localInstanceMember = "userId", referencedEntity = "User", referencedField = "id", relationshipWithContainedObject = AnnotationConstants.RELATIONSHIP_PARENT)
 	private User user;
-	
-  public Integer getUserId() {
+
+  public long getUserId() {
     return userId;
   }
 
-  public void setUserId(Integer userId) {
+  public void setUserId(long userId) {
     this.userId = userId;
   }
 
@@ -59,5 +63,5 @@ public class UserCredentials extends AbstractVO {
   public void setUser(User user) {
     this.user = user;
   }
-	
+
 } // end of class UserLogin

@@ -25,7 +25,7 @@ public class ORMInfoManagerTest {
     user.setEmail("john@test.com");
     user.setUserTypeId(1);
     user.setUsername("johnd");
-    user.setActive(true);
+    user.setIsActive(true);
     
     FirmUser firmUser = new FirmUser();
     firmUser.setId(2);
@@ -34,14 +34,14 @@ public class ORMInfoManagerTest {
     firmUser.setEmail("jane@test.com");
     firmUser.setUserTypeId(2);
     firmUser.setUsername("janes");
-    firmUser.setActive(false);
+    firmUser.setIsActive(false);
     firmUser.setTitle("Manager");
     firmUser.setSSN("123-45-6789");
-    firmUser.setOwner(true);
+    firmUser.setIsOwner(true);
     firmUser.setLoginCount(5);
     
     System.out.println("Before copy - User: " + user);
-    ORMInfoManager.copyFields(user, firmUser);
+    ORMInfoManager.copyFieldsFromChildToParent(user, firmUser);
     System.out.println("After copy - User: " + user);
     
     printResult("id", 1, user.getId());
@@ -50,7 +50,7 @@ public class ORMInfoManagerTest {
     printResult("email", "jane@test.com", user.getEmail());
     printResult("userTypeId", 2, user.getUserTypeId());
     printResult("username", "janes", user.getUsername());
-    printResult("isActive", false, user.isActive());
+    printResult("isActive", false, user.getIsActive());
     System.out.println();
   }
   
@@ -69,7 +69,7 @@ public class ORMInfoManagerTest {
     srcUser.setEmail("alice@test.com");
     srcUser.setUserTypeId(5);
     srcUser.setUsername("aliceb");
-    srcUser.setActive(true);
+    srcUser.setIsActive(true);
     
     System.out.println("Before copy - FirmUser: " + destFirmUser);
     ORMInfoManager.copyFields(destFirmUser, srcUser);
@@ -81,7 +81,7 @@ public class ORMInfoManagerTest {
     printResult("email", "alice@test.com", destFirmUser.getEmail());
     printResult("userTypeId", 5, destFirmUser.getUserTypeId());
     printResult("username", "aliceb", destFirmUser.getUsername());
-    printResult("isActive", true, destFirmUser.isActive());
+    printResult("isActive", true, destFirmUser.getIsActive());
     printResult("title should be unchanged (CEO)", "CEO", destFirmUser.getTitle());
     printResult("loginCount should be unchanged (999)", 999, destFirmUser.getLoginCount());
     System.out.println();
@@ -97,7 +97,7 @@ public class ORMInfoManagerTest {
     user.setEmail("test@test.com");
     user.setUserTypeId(null);  // null value
     user.setUsername("testuser");
-    user.setActive(true);
+    user.setIsActive(true);
     
     FirmUser firmUser = new FirmUser();
     firmUser.setId(2);
@@ -106,10 +106,10 @@ public class ORMInfoManagerTest {
     firmUser.setEmail("new@test.com");
     firmUser.setUserTypeId(3);
     firmUser.setUsername("newuser");
-    firmUser.setActive(false);
+    firmUser.setIsActive(false);
     
     System.out.println("Before copy - User id=" + user.getId() + ", userTypeId=" + user.getUserTypeId());
-    ORMInfoManager.copyFields(user, firmUser);
+    ORMInfoManager.copyFieldsFromChildToParent(user, firmUser);
     System.out.println("After copy - User id=" + user.getId() + ", userTypeId=" + user.getUserTypeId());
     
     printResult("id should remain 1", 1, user.getId());

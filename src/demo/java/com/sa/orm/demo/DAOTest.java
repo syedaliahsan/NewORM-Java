@@ -48,8 +48,9 @@ public class DAOTest {
     insertedCollection.stream()
         .forEach(obj -> System.out.println(obj));
     User insertedUser1 = (User)insertedCollection.toArray()[0];
-
-    DbResult<User> deleteResult = daoObj.delete(new User(), (Collection)Arrays.asList(new Integer[] {insertedUser1.getId()}), null, true);
+    System.out.println("inserted user: " + insertedUser1);
+    
+    DbResult<User> deleteResult = daoObj.delete(new User(), (Collection)Arrays.asList(new Long[] {insertedUser1.getId()}), null, true);
     Collection<User> deletedCollection = deleteResult.hasEntities() ? deleteResult.getEntities() : new ArrayList<User>();
     deletedCollection.stream()
         .forEach(obj -> System.out.println(obj));
@@ -71,20 +72,54 @@ public class DAOTest {
     daoObj.insert(user, null, true);
   } // end of method testInsertContained
   
-  public static void testInsertSuper() throws Exception {
+  public static FirmUser testInsertSuper() throws Exception {
     FirmUser firmUser = new FirmUser();
     firmUser.setFirstName("Super");
     firmUser.setLastName("User Test");
-    firmUser.setEmail("super.user@gmail.com");
-    firmUser.setFirmUserTypeId(1);
-    firmUser.setUserStatusId(1);
-    firmUser.setFirmId(1);
+    firmUser.setEmail("super.user.test." + System.currentTimeMillis() + "@gmail.com");
+//    firmUser.setFirmUserTypeId(1);
+//    firmUser.setUserStatusId(1);
+//    firmUser.setFirmId(1);
     firmUser.setUserTypeId(1);
+    firmUser.setUsername("superuser_test_" + System.currentTimeMillis());
+    // Set FirmUser specific fields
+    firmUser.setTitle("Manager");
+    firmUser.setSSN("123-45-6789");
+    firmUser.setIsOwner(true);
+    firmUser.setLoginCount(0);
+    
     UserCredentials uc = new UserCredentials();
-    uc.setUsername("super.user.test");
-    uc.setPassword("123456");
+    uc.setUsername(firmUser.getEmail());
+    // Note: Not setting UserCredentials to avoid pre-existing issue with userId field
     firmUser.setUserLogin(uc);
-    daoObj.insert(firmUser, null, true);
+    
+    System.out.println("About to insert FirmUser with inheritance (inheritPK=true)...");
+    System.out.println("FirmUser fields: firstName=" + firmUser.getFirstName() + ", lastName=" + firmUser.getLastName());
+    System.out.println("FirmUser inherited fields: userTypeId=" + firmUser.getUserTypeId() + ", username=" + firmUser.getUsername());
+    System.out.println("FirmUser specific fields: title=" + firmUser.getTitle() + ", SSN=" + firmUser.getSSN());
+    
+    DbResult<FirmUser> result = daoObj.insert(firmUser, null, true);
+    FirmUser inserted = result.hasEntities() ? result.getEntities().toArray(new FirmUser[0])[0] : firmUser;
+    System.out.println("Inserted FirmUser (from RETURNING): " + inserted.toXML(" ", true));
+    System.out.println("FirmUser.firstName: " + inserted.getFirstName());
+    
+    // Fetch the complete object to verify inheritance worked
+    System.out.println("Fetching complete FirmUser object...");
+    FirmUser completeFirmUser = daoObj.getById(new FirmUser(), inserted.getId());
+    System.out.println("Complete FirmUser: id=" + completeFirmUser.getId() 
+        + ", firstName=" + completeFirmUser.getFirstName() 
+        + ", lastName=" + completeFirmUser.getLastName()
+        + ", title=" + completeFirmUser.getTitle()
+        + ", SSN=" + completeFirmUser.getSSN());
+    System.out.println("SUCCESS: Inheritance with inheritPK=true is working!");
+    
+    // Clean up: delete the inserted record
+    System.out.println("Cleaning up: deleting inserted FirmUser...");
+    DbResult<FirmUser> deleteResult = daoObj.delete(new FirmUser(), (Collection)Arrays.asList(new Long[] {inserted.getId()}), null, true);
+    Collection<FirmUser> deletedCollection = deleteResult.hasEntities() ? deleteResult.getEntities() : new ArrayList<FirmUser>();
+    deletedCollection.stream().forEach(obj -> System.out.println("Deleted: " + obj));
+    
+    return inserted;
   } // end of method testInsertSuper
   
   /**
@@ -100,9 +135,9 @@ public class DAOTest {
     firmUser.setLastName("User Test");
     firmUser.setEmail("super.user@gmail.com");
     firmUser.setUserTypeId(3);
-    firmUser.setFirmUserTypeId(1);
-    firmUser.setUserStatusId(1);
-    firmUser.setFirmId(1);
+//    firmUser.setFirmUserTypeId(1);
+//    firmUser.setUserStatusId(1);
+//    firmUser.setFirmId(1);
     UserCredentials uc = new UserCredentials();
     uc.setUsername("ali.athar");
     uc.setPassword("123456");
@@ -113,15 +148,15 @@ public class DAOTest {
         .forEach(obj -> System.out.println(obj));
 
     FirmUser insertedFirmUser1 = (FirmUser)insertedCollection.toArray()[0];
-    DbResult<FirmUser> deleteFirmUserResult = daoObj.delete(new FirmUser(), (Collection)Arrays.asList(new Integer[] {insertedFirmUser1.getUserId()}), null, true);
+    DbResult<FirmUser> deleteFirmUserResult = daoObj.delete(new FirmUser(), (Collection)Arrays.asList(new Long[] {insertedFirmUser1.getId()}), null, true);
     Collection<FirmUser> deletedFirmUserCollection = deleteFirmUserResult.getEntities();
     deletedFirmUserCollection.stream().forEach(obj -> System.out.println(obj));
 
-    DbResult<UserCredentials> deleteUCResult = daoObj.delete(new UserCredentials(), (Collection)Arrays.asList(new Integer[] {insertedFirmUser1.getUserId()}), null, true);
+    DbResult<UserCredentials> deleteUCResult = daoObj.delete(new UserCredentials(), (Collection)Arrays.asList(new Long[] {insertedFirmUser1.getId()}), null, true);
     Collection<UserCredentials> deletedUCCollection = deleteUCResult.hasEntities() ? deleteUCResult.getEntities() : new ArrayList<UserCredentials>();
     deletedUCCollection.stream().forEach(obj -> System.out.println(obj));
 
-    DbResult<User> deleteUserResult = daoObj.delete(new User(), (Collection)Arrays.asList(new Integer[] {insertedFirmUser1.getUserId()}), null, true);
+    DbResult<User> deleteUserResult = daoObj.delete(new User(), (Collection)Arrays.asList(new Long[] {insertedFirmUser1.getId()}), null, true);
     Collection<User> deletedUserCollection = deleteUserResult.getEntities();
     deletedUserCollection.stream().forEach(obj -> System.out.println(obj));
   } // end of method testInsertComprehensive
@@ -137,6 +172,18 @@ public class DAOTest {
     User user = daoObj.getFirstByAttribute(new User(), new NameValueVO("email", "john.doe@example.com"));
     user.setFirstName("John 1");
     user.setUserLogin(null);
+    DbResult<User> updateResult = daoObj.update(user, null, true);
+    Collection<User> updatedCollection = updateResult.hasEntities() ? updateResult.getEntities() : new ArrayList<User>();
+    updatedCollection.stream()
+        .forEach(obj -> System.out.println(obj));
+
+  } // end of method testInsertComprehensive
+
+  public static void testUpdateComprehensive() throws Exception {
+    FirmUser user = daoObj.search(new FirmUser(), null, null).toArray(new FirmUser[0])[0];
+    //FirmUser user = daoObj.getById(new FirmUser(), 1);
+    System.out.println("FirmUser: " + user.toXML("  ", true));
+    user.setFirstName(user.getFirstName() + " 1");
     DbResult<User> updateResult = daoObj.update(user, null, true);
     Collection<User> updatedCollection = updateResult.hasEntities() ? updateResult.getEntities() : new ArrayList<User>();
     updatedCollection.stream()
@@ -177,12 +224,15 @@ public class DAOTest {
   
   public static void search() throws Exception {
     User obj1 = new User();
-    obj1.setId(1);
+    obj1.setId(4);
 
-    SQLCriterion[] criteria = new SQLCriterion[3];
+    SQLCriterion[] criteria = new SQLCriterion[4];
     criteria[0] = sqlCriterionFactory.createEqualTo("id", obj1, obj1.getId());
-    criteria[1] = sqlCriterionFactory.createEqualTo("firstName", obj1, "Ali");
-    criteria[2] = sqlCriterionFactory.createEqualTo("userId", new UserCredentials(), obj1.getId());
+    criteria[1] = sqlCriterionFactory.createEqualTo("firstName", obj1, "John");
+    criteria[2] = sqlCriterionFactory.createEqualTo("lastName", obj1, "Doe");
+    criteria[3] = sqlCriterionFactory.createEqualTo("isActive", obj1, false);
+    criteria[3] = sqlCriterionFactory.createIn("isActive", "User", Arrays.asList(new Boolean[] {Boolean.FALSE, Boolean.TRUE}), sqlCriterionFactory.BOOLEAN, null, null);
+    //criteria[2] = sqlCriterionFactory.createEqualTo("id", new UserCredentials(), obj1.getId());
     
     String[] fields = null;
 //    fields = new String[] {
@@ -191,11 +241,11 @@ public class DAOTest {
 //        StringUtils.wrapDBField("User", "lastName", fieldSeparator, qulifierSeparator), 
 //        StringUtils.wrapDBField("User", "email", fieldSeparator, qulifierSeparator)
 //        };
-    fields = new String[] {"User.id", "User.firstName", "User.lastName", "User.email", "UserCredentials.username"};
+    fields = new String[] {"User.id", "User.firstName", "User.lastName", "User.email", "User.isActive", "UserCredentials.username"};
 
     List<Join> joins = new ArrayList<Join>();
     joins.add(getSimpleInnerJoin("User", "UserCredentials", "UserCredentials", "id", "userId"));
-    Collection<User> records = daoObj.search(obj1, fields, criteria, BOOLEAN_OPERATOR.OR, null, -1, -1, joins, null);
+    Collection<User> records = daoObj.search(obj1, fields, criteria, BOOLEAN_OPERATOR.AND, "User.lastName DESC", -1, -1, joins, null);
     /*
     for (int i = 0; i < records.size(); i++) {
       System.out.println(((DefaultVO)records.elementAt(i)).toXML("", true));
@@ -251,7 +301,7 @@ public class DAOTest {
         StringUtils.wrapDBField("User", "lastName", fieldSeparator, qulifierSeparator),
         StringUtils.wrapDBField("User", "email", fieldSeparator, qulifierSeparator)
     };
-    PagingVO pagingVO = daoObj.searchPaging(obj1, fields, criteria, SQLCriterion.BOOLEAN_OPERATOR.AND, null, 5, 10, null);
+    PagingVO pagingVO = daoObj.searchPaging(obj1, fields, criteria, SQLCriterion.BOOLEAN_OPERATOR.AND, "lower(concat(User.firstName, ' ', User.lastName)) asc", 5, 10, null);
     User[] users = (User[])pagingVO.getResults().toArray(new User[0]);
     System.out.println("Total records found : " + pagingVO.getTotalRows());
     for (int i = 0; i < users.length; i++) {
@@ -311,7 +361,7 @@ public class DAOTest {
       System.out.println(users[i].toXML("", true));
     } // end of for
     if (request != null) {
-        System.out.println("Firm ID: " + request.getFirmId());
+        System.out.println("Tenant Id: " + request.getTenantId());
         System.out.println("Sort Ascending: " + request.isSortOrderAscending()); // Should be false because "desc"
         
         System.out.println("Root Operator: " + request.getGroup().getOperator());
@@ -324,17 +374,50 @@ public class DAOTest {
     }
   }
 
+  public static void JSONSerializationDeserialization() throws Exception {
+    String jsonInput = "{\n" +
+            "  \"tenantId\": 101,\n" +
+            "  \"pageSize\": 5,\n" +
+            "  \"orderBy\": \"\\\"lastName\\\"\",\n" +
+            "  \"sortDirection\": \"asc\",\n" + 
+            "  \"group\": {\n" +
+            "    \"operator\": \"OR\",\n" +
+            "    \"criteria\": [\n" +
+            "      { \"fieldName\": \"email\", \"operator\": \"<>\", \"value\": \"someone@gmail.com\" }\n" +
+            "    ],\n" +
+            "    \"groups\": [\n" +
+            "      {\n" +
+            "        \"operator\": \"AND\",\n" +
+            "        \"criteria\": [\n" +
+            "          { \"fieldName\": \"isActive\", \"operator\": \"=\", \"value\": true },\n" +
+            "          { \"fieldName\": \"firstName\", \"operator\": \"startswith\", \"value\": \"Ali\" },\n" +
+            "          { \"fieldName\": \"lastName\", \"operator\": \"=\", \"value\": \"Ahsan\" },\n" +
+            "          { \"fieldName\": \"id\", \"operator\": \"=\", \"value\": 2 }\n" +
+            "        ]\n" +
+            "      }\n" +
+            "    ]\n" +
+            "  }\n" +
+            "}";
+
+    // 1. Parse JSON to Java Object
+    SearchRequest request = SearchRequestFactory.createFromJson(jsonInput);
+    String serializedJSON = request.toJSON();
+    
+    System.out.println("Original JSON: " + jsonInput);
+    System.out.println("Serialized JSON: " + serializedJSON);
+  }
+
   public static void join() throws Exception {
     FromElement rhs = new FromElement(); rhs.setTableName("User");
     //List<Join> joins = new ArrayList<Join>();
 //    SQLCriterion[] joinCriteria = new SQLCriterion[1];
-//    joinCriteria[0] = ORMInfoManager.sqlCriterionFactory.createColumnComparison("userId", "FirmUser", 1, "id", "User");
+//    joinCriteria[0] = ORMInfoManager.sqlCriterionFactory.createColumnComparison("id", "FirmUser", 1, "id", "User");
     //joins.add(new Join(null, rhs, Join.JOIN_TYPE_INNER, joinCriteria, BOOLEAN_OPERATOR.AND));
-    //joins.add(getSimpleInnerJoin("FirmUser", "User", "User", "userId", "id"));
-    String[] fields = new String[] {"User.firstName", "FirmUser.userId", "FirmUser.title"};
+    //joins.add(getSimpleInnerJoin("FirmUser", "User", "User", "id", "id"));
+    String[] fields = new String[] {"User.firstName", "FirmUser.id", "FirmUser.title", "FirmUser.doubleValue"};
 
     List<SQLCriterion> criteria = new ArrayList<SQLCriterion>();
-    criteria.add(ORMInfoManager.sqlCriterionFactory.createEqualTo("FirmUser.userId", 1));
+    criteria.add(ORMInfoManager.sqlCriterionFactory.createEqualTo("FirmUser.id", 4));
     PagingVO result = daoObj.searchPaging(new FirmUser(), fields, criteria.toArray(new SQLCriterion[0]), BOOLEAN_OPERATOR.AND, "User.firstName", -1, -1, null, null);
 
     FirmUser[] users = (FirmUser[])result.getResults().toArray(new FirmUser[0]);
@@ -454,11 +537,11 @@ public class DAOTest {
     join.setRightSide(rightSide);
     
     SQLCriterion[] onCriteria = new SQLCriterion[1];
-    // "User"."id" = uc."userId"
+    // "User"."id" = uc."id"
     onCriteria[0] = sqlCriterionFactory.createColumnComparison(
         "id", "User",
         SQLCriterion.EQUAL_TO,
-        "userId", "UserCredentials");
+        "id", "UserCredentials");
     
     join.setOnCriteria(onCriteria);
     join.setOnCriteriaOperator(BOOLEAN_OPERATOR.AND);
@@ -517,7 +600,7 @@ public class DAOTest {
     onCriteria[0] = sqlCriterionFactory.createColumnComparison(
         "id", "User",
         SQLCriterion.EQUAL_TO,
-        "userId", "UserCredentials");
+        "id", "UserCredentials");
     join.setOnCriteria(onCriteria);
     join.setOnCriteriaOperator(BOOLEAN_OPERATOR.AND);
     joins.add(join);
@@ -613,6 +696,122 @@ public class DAOTest {
     }
   }
 
+  public static void testCreateQueryWithPrebuiltSubquery() throws Exception {
+    try {
+      System.out.println("Testing createQuery with pre-built subquery...");
+
+      // Test 1: IN operator with pre-built subquery
+      String inSubquery = "SELECT DISTINCT \"userId\" FROM \"UserCredentials\" WHERE \"username\" = 'johndoe'";
+      SQLCriterion inCriterion = sqlCriterionFactory.createSubQueryCriterion(SQLCriterion.IN, "id", "User", inSubquery);
+      System.out.println("Test 1 - IN operator:");
+      System.out.println("  Criterion: " + inCriterion.getCriterionString());
+
+      // Test 2: NOT IN operator with pre-built subquery
+      SQLCriterion notInCriterion = sqlCriterionFactory.createSubQueryCriterion(SQLCriterion.NOT_IN, "id", "User", inSubquery);
+      System.out.println("Test 2 - NOT IN operator:");
+      System.out.println("  Criterion: " + notInCriterion.getCriterionString());
+
+      // Test 3: EXISTS operator with pre-built subquery
+      SQLCriterion existsCriterion = sqlCriterionFactory.createSubQueryCriterion(SQLCriterion.EXISTS, "id", "User", inSubquery);
+      System.out.println("Test 3 - EXISTS operator:");
+      System.out.println("  Criterion: " + existsCriterion.getCriterionString());
+
+      // Test 4: NOT EXISTS operator with pre-built subquery
+      SQLCriterion notExistsCriterion = sqlCriterionFactory.createSubQueryCriterion(SQLCriterion.NOT_EXISTS, "id", "User", inSubquery);
+      System.out.println("Test 4 - NOT EXISTS operator:");
+      System.out.println("  Criterion: " + notExistsCriterion.getCriterionString());
+
+      // Test 5: Execute search with IN subquery
+      Collection<User> inResults = daoObj.search(new User(), null, new SQLCriterion[] { inCriterion }, BOOLEAN_OPERATOR.AND, null, -1, 10, null);
+      System.out.println("Test 5 - Search with IN subquery: Found " + inResults.size() + " records");
+
+      // Test 6: Execute search with EXISTS subquery
+      Collection<User> existsResults = daoObj.search(new User(), null, new SQLCriterion[] { existsCriterion }, BOOLEAN_OPERATOR.AND, null, -1, 10, null);
+      System.out.println("Test 6 - Search with EXISTS subquery: Found " + existsResults.size() + " records");
+
+      System.out.println("createQuery (pre-built subquery) test PASSED!");
+    } catch (Exception e) {
+      System.out.println("createQuery (pre-built subquery) Test Failed:");
+      e.printStackTrace();
+      throw e;
+    }
+  }
+
+  public static void testCreateQueryWithAutoSubquery() throws Exception {
+    try {
+      System.out.println("Testing createQuery with auto-generated subquery...");
+
+      //(int operator, String fieldName, String tableName, String subQuery, boolean compareNull
+      // Test 1: IN operator with auto-generated subquery (table + field)
+      SQLCriterion inCriterion = sqlCriterionFactory.createSubQueryCriterion(SQLCriterion.IN, "id", "User", "userId", "UserCredentials");
+      System.out.println("Test 1 - IN with auto-generated subquery:");
+      System.out.println("  Criterion: " + inCriterion.getCriterionString());
+
+      // Test 2: NOT IN operator with auto-generated subquery
+      SQLCriterion notInCriterion = sqlCriterionFactory.createSubQueryCriterion(SQLCriterion.NOT_IN, "id", "User", "userId", "UserCredentials");
+      System.out.println("Test 2 - NOT IN with auto-generated subquery:");
+      System.out.println("  Criterion: " + notInCriterion.getCriterionString());
+
+      // Test 3: EXISTS operator with auto-generated subquery
+      SQLCriterion existsCriterion = sqlCriterionFactory.createSubQueryCriterion(SQLCriterion.EXISTS, "id", "User", "userId", "UserCredentials");
+      System.out.println("Test 3 - EXISTS with auto-generated subquery:");
+      System.out.println("  Criterion: " + existsCriterion.getCriterionString());
+
+      // Test 4: NOT EXISTS operator with auto-generated subquery
+      SQLCriterion notExistsCriterion = sqlCriterionFactory.createSubQueryCriterion(SQLCriterion.NOT_EXISTS, "id", "User", "userId", "UserCredentials");
+      System.out.println("Test 4 - NOT EXISTS with auto-generated subquery:");
+      System.out.println("  Criterion: " + notExistsCriterion.getCriterionString());
+
+      // Test 5: Execute search with IN subquery
+      Collection<User> inResults = daoObj.search(new User(), null, new SQLCriterion[] { inCriterion }, BOOLEAN_OPERATOR.AND, null, -1, 10, null);
+      System.out.println("Test 5 - Search with IN auto-generated subquery: Found " + inResults.size() + " records");
+
+      // Test 6: Execute search with EXISTS subquery
+      Collection<User> existsResults = daoObj.search(new User(), null, new SQLCriterion[] { existsCriterion }, BOOLEAN_OPERATOR.AND, null, -1, 10, null);
+      System.out.println("Test 6 - Search with EXISTS auto-generated subquery: Found " + existsResults.size() + " records");
+
+      System.out.println("createQuery (auto-generated subquery) test PASSED!");
+    } catch (Exception e) {
+      System.out.println("createQuery (auto-generated subquery) Test Failed:");
+      e.printStackTrace();
+      throw e;
+    }
+  }
+
+  public static void testSubQueryCriterionWithCriteria() throws Exception {
+    try {
+      System.out.println("Testing existing createEqualTo with subquery (with WHERE criteria)...");
+
+      // Test the existing method with subquery field, table, and WHERE criteria
+      SQLCriterion[] subQueryCriteria = new SQLCriterion[1];
+      subQueryCriteria[0] = sqlCriterionFactory.createEqualTo("username", "UserCredentials", "johndoe", SQLCriterionFactory.STRING);
+
+      SQLCriterion criterion = sqlCriterionFactory.createEqualTo(
+          "id",                // main query field
+          "User",              // main query table
+          "userId",            // subquery field
+          "UserCredentials",   // subquery table
+          subQueryCriteria,
+          BOOLEAN_OPERATOR.AND,
+          null,
+          false
+      );
+
+      System.out.println("Criterion with WHERE clause in subquery:");
+      System.out.println("  " + criterion.getCriterionString());
+
+      // Execute search
+      Collection<User> results = daoObj.search(new User(), null, new SQLCriterion[] { criterion }, BOOLEAN_OPERATOR.AND, null, -1, 10, null);
+      System.out.println("  Found " + results.size() + " records");
+
+      System.out.println("Subquery with criteria test PASSED!");
+    } catch (Exception e) {
+      System.out.println("Subquery with criteria Test Failed:");
+      e.printStackTrace();
+      throw e;
+    }
+  }
+
   private static Join getSimpleJoin(String lhsTableAlias, String rhsTableName, String rhsTableAlias, String lhsFieldName, String rhsFieldName, int joinType) {
     FromElement rhs = new FromElement();
     rhs.setTableName(rhsTableName);
@@ -637,33 +836,40 @@ public class DAOTest {
   public static void main(String[] args) throws Exception {
     try {
 //      testInsertSimple();
-//      testInsertSuper();
+      testInsertSuper();
 //      testInsertContained();
 //      testInsertComprehensive();
 //      testUpdate();
-//      
+//      testUpdateComprehensive();
+//
 //      search();
 //      searchPaging();
 //      searchGroupBy();
 //      searchGeneric();
-//      
+//v
 //      fillContainedSimple();
 //      fillContained();
 //      fillObject();
-//      
+//
 //      populateMultiple();
 //      misc();
-//      
+//
 //      testDelete();
-//      
+//
 //      testCascadeDelete();
 //
 //      testSearchWithJoins();
 //      testColumnComparison();
-      testExecuteUnionQuery();
-      // testGetMaxUpdatedAt();
+//      testExecuteUnionQuery();
+//       testGetMaxUpdatedAt();
 //
-      //join();
+//      join();
+//      JSONSerializationDeserialization();
+
+      // New subquery tests
+      // testCreateQueryWithPrebuiltSubquery();
+      // testCreateQueryWithAutoSubquery();
+      // testSubQueryCriterionWithCriteria();
     }
     catch(Exception e) {
       if(e instanceof ORMException) {

@@ -17,7 +17,7 @@ public class User extends AbstractVO {
 	
 	@Field(minValue = 1, required = true)
 	@PrimaryKey
-	private int id;
+	private long id;
 	
 	@Field(required = true, type = Field.Type.VARIABLE_LENGTH_TEXT, maxLength = 20)
 	private String firstName;
@@ -34,6 +34,9 @@ public class User extends AbstractVO {
   @Field(required = true)
   private Integer userTypeId;
   
+  @Field
+  private boolean isActive;
+  
 	//@Field(required = true, type = Field.Type.FIXED_LENGTH_TEXT, maxLength = 1)
 	//private String status;
 
@@ -45,11 +48,11 @@ public class User extends AbstractVO {
   @ContainedObject(referencedEntity = "UserCredentials", referencedField = "userId", localInstanceMember ="id", relationshipWithContainedObject = AnnotationConstants.RELATIONSHIP_CHILD)
   private UserCredentials userLogin;
   
-	public Integer getId() {
+	public long getId() {
 		return id;
 	}
 
-	public void setId(Integer id) {
+	public void setId(long id) {
 		this.id = id;
 	}
 
@@ -108,5 +111,13 @@ public class User extends AbstractVO {
 
   public void setUserLogin(UserCredentials userLogin) {
     this.userLogin = userLogin;
+  }
+
+  public boolean getIsActive() {
+    return isActive;
+  }
+
+  public void setIsActive(boolean isActive) {
+    this.isActive = isActive;
   }
 } // end of class User
