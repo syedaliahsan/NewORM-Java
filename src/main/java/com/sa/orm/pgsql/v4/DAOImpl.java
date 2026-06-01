@@ -233,17 +233,13 @@ public class DAOImpl extends AbstractDAO {
         if(inheritPK) {
           // When inheritPK is true, the child uses parent's PK
           // First check if parent exists and needs to be inserted
-//          String superClassPKName = ORMInfoManager.getPrimaryKeyName(superClass.getName());
-//          logger.finer("Super class [" + superClass.getName() + "] PK name: " + superClassPKName);
           if(ORMInfoManager.isInstanceMemberValueSet(pojo, ORMInfoManager.getPrimaryKeyField(superClass.getName())) == false) {
             logger.finer("About to insert super object of type [" + superClass.getName() + "] for [" + clazz.getName() + "].");
             DbResult<T> insertedParentObj = insert(superClass, pojo, insertedObj, con, true, insertContainedParentObjects, insertContainedChildObjects);
             Object insertedSuperObject = insertedParentObj.getEntities().toArray()[0];
             logger.finer("insertedSuperObject : " + insertedSuperObject.toString());
             Object insertedObjPKValue = ORMInfoManager.getPrimaryKeyValue(insertedSuperObject);
-            //Object insertedObjPKValue = ORMInfoManager.getPrimaryKeyValue(superClass, insertedSuperObject);
             // Set the inherited PK in the child object
-            //DBField pkField = ORMInfoManager.getFieldByInstanceMemberName(superClass, superClassPKName);
             DBField pkField = ORMInfoManager.getPrimaryKeyField(clazz.getName());
             if(pkField != null) {
               ORMInfoManager.setInstanceMemberValue(pojo, pkField, insertedObjPKValue);
@@ -262,7 +258,6 @@ public class DAOImpl extends AbstractDAO {
             Object insertedSuperObject = insertedParentObjResult.getEntities().toArray()[0];
             logger.finer("insertedSuperObject : " + insertedSuperObject.toString());
             Object insertedObjPKValue = ORMInfoManager.getPrimaryKeyValue(superClass, insertedSuperObject);
-            //DBField pkField = ORMInfoManager.getPrimaryKeyField(pojo.getClass().getName());
             DBField pkField = ORMInfoManager.getPrimaryKeyField(clazz.getName());
             ORMInfoManager.setInstanceMemberValue(pojo, pkField, insertedObjPKValue);
             logger.finer("To be inserted object after setting the super PK: " + pojo.toString());
@@ -303,7 +298,8 @@ public class DAOImpl extends AbstractDAO {
       if(returnAffectedObject || insertContainedChildObjects) {
         T insertedObj1 = (T)((Collection<T>)this.executeQuery(sql, clazz, pojo, con)).toArray()[0];
         logger.finer("Inserted object: " + insertedObj1);
-        if(superClass != null && superClass.getName().equals(Object.class.getName()) == false) {
+        if((superClass != null && superClass.getName().equals(Object.class.getName()) == false)
+            || insertedObj1.getClass().getName().equals(insertedObj.getClass().getName()) == false) {
           logger.finer("About to copy fields from " + insertedObj1.getClass().getName() + " class object into " + insertedObj.getClass().getName() + " class object");
           ORMInfoManager.copyFields(insertedObj, insertedObj1);
           logger.finer("insertedObj containing parent fields as well " + insertedObj.toString());
@@ -386,6 +382,7 @@ public class DAOImpl extends AbstractDAO {
       str.append(valuesVec.elementAt(i));
     } // end of for
 
+    if(str.toString().trim().length() < 1) return null;
     String whereClause = criterionFactory.createCriteriaString(criteria, booleanOperator);
     if(StringUtils.getNull(whereClause) != null) {
       whereClause = sqlConstants.getQryWhere().format(new Object[] {whereClause});
@@ -404,22 +401,50 @@ public class DAOImpl extends AbstractDAO {
   public <T> DbResult<T> update(T pojo, String[] fields, SQLCriterion[] criteria,
       BOOLEAN_OPERATOR booleanOperator, Connection con, boolean returnUpdatedObject)
       throws ORMException {
-    DbResult<T> resultObj = null;
+    DbResult<T> dbResult = null;
+    T updatedObj = null;
     try {
+      if(updatedObj == null) {
+        updatedObj = (T)ORMInfoManager.instantiate(pojo.getClass().getName());
+      }
+      // Handle inheritance: update super class object first and copy fields from updated super object
+      Class superClass = ORMInfoManager.getSuperClass(pojo.getClass());
+      if(superClass != null && superClass.getName().equals(Object.class.getName()) == false) {
+        Object superObj = ORMInfoManager.getSuperClassObject(pojo, true);
+        if(superObj != null) {
+          // Update the super object first
+          String[] superFields = null; //StringUtils.splitString(ORMInfoManager.getPlainDBFieldNames(superObj), sqlConstants.getFieldsSeparator());
+          DbResult<Object> updatedSuperResult = update(superObj, superFields, con, returnUpdatedObject);
+          // Copy fields from updated super object to pojo
+          if(returnUpdatedObject && updatedSuperResult != null && updatedSuperResult.hasEntities()) {
+            Object updatedSuperObj = updatedSuperResult.getEntities().toArray()[0];
+            ORMInfoManager.copyFields(updatedObj, updatedSuperObj);
+            logger.finer("update - Copied fields from updated super object to [" + pojo.getClass().getName() + "] object.");
+          }
+        }
+      }
+
       String sql = createUpdateQuery(pojo, fields, criteria, booleanOperator, returnUpdatedObject);
+      if(sql == null) return null;
       logger.info(sql + ";");
       if(returnUpdatedObject) {
-        resultObj = new DbResult<T>((Collection<T>)this.executeQuery(sql, pojo.getClass(), pojo, con));
+        dbResult = new DbResult<T>((Collection<T>)this.executeQuery(sql, pojo.getClass(), pojo, con));
+        if(dbResult != null && dbResult.hasEntities()) {
+          Object updatedObjTemp = dbResult.getEntities().toArray()[0];
+          ORMInfoManager.copyFields(updatedObj, updatedObjTemp);
+          logger.finer("update - Copied fields from updated super object to [" + pojo.getClass().getName() + "] object.");
+          dbResult = new DbResult<T>(updatedObj);
+        }
       }
       else {
         int affectedCount = this.executeUpdate(sql, pojo, con);
-        resultObj = new DbResult<T>(affectedCount);
+        dbResult = new DbResult<T>(affectedCount);
       }
     } // end of try
     catch(SQLException e) {
       throw exceptionUtil.getUpdateException(e.getMessage(), e);
     } // end of catch
-    return resultObj;
+    return dbResult;
   } // end of method update
   
   public String createDeleteQuery(Object pojo, boolean returnDeletedObjects) {

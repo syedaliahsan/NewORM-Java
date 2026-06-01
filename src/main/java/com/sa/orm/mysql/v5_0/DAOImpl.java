@@ -183,19 +183,15 @@ public class DAOImpl extends AbstractDAO {
         if(inheritPK) {
           // When inheritPK is true, the child uses parent's PK
           // First check if parent exists and needs to be inserted
-//          String superClassPKName = ORMInfoManager.getPrimaryKeyName(superClass.getName());
-//          logger.finer("Super class [" + superClass.getName() + "] PK name: " + superClassPKName);
           if(ORMInfoManager.isInstanceMemberValueSet(pojo, ORMInfoManager.getPrimaryKeyField(superClass.getName())) == false) {
             logger.finer("About to insert super object of type [" + superClass.getName() + "] for [" + clazz.getName() + "].");
             DbResult<T> insertedParentObj = insert(superClass, pojo, insertedObj, con, true, insertContainedParentObjects, insertContainedChildObjects);
             Object insertedSuperObject = insertedParentObj.getEntities().toArray()[0];
             logger.finer("insertedSuperObject : " + insertedSuperObject.toString());
             Object insertedObjPKValue = ORMInfoManager.getPrimaryKeyValue(insertedSuperObject);
-            //Object insertedObjPKValue = ORMInfoManager.getPrimaryKeyValue(superClass, insertedSuperObject);
-            // Set the inherited PK in the child object
-            //DBField pkField = ORMInfoManager.getFieldByInstanceMemberName(superClass, superClassPKName);
             DBField pkField = ORMInfoManager.getPrimaryKeyField(clazz.getName());
             if(pkField != null) {
+              // Set the inherited PK in the child object
               ORMInfoManager.setInstanceMemberValue(pojo, pkField, insertedObjPKValue);
               logger.finer("Set inherited PK [" + insertedObjPKValue + "] in field [" + pkField.getInstanceMemberName() + "] of [" + clazz.getName() + "] object.");
             }
@@ -253,9 +249,15 @@ public class DAOImpl extends AbstractDAO {
       if(returnAffectedObject || insertContainedChildObjects) {
         T insertedObj1 = (T)((Collection<T>)this.executeQuery(sql, clazz, pojo, con)).toArray()[0];
         logger.finer("Inserted object: " + insertedObj1);
-        logger.finer("About to copy fields from " + insertedObj1.getClass().getName() + " class object into " + insertedObj.getClass().getName() + " class object");
-        ORMInfoManager.copyFields(insertedObj, insertedObj1);
-        logger.finer("insertedObj containing parent fields as well " + insertedObj.toString());
+        if((superClass != null && superClass.getName().equals(Object.class.getName()) == false)
+            || insertedObj1.getClass().getName().equals(insertedObj.getClass().getName()) == false) {
+          logger.finer("About to copy fields from " + insertedObj1.getClass().getName() + " class object into " + insertedObj.getClass().getName() + " class object");
+          ORMInfoManager.copyFields(insertedObj, insertedObj1);
+          logger.finer("insertedObj containing parent fields as well " + insertedObj.toString());
+        }
+        else {
+          insertedObj = insertedObj1;
+        }
         pkValue = ORMInfoManager.getPrimaryKeyValue(insertedObj);
         dbResult = new DbResult<T>(insertedObj);
         logger.finer("Id of the ResultObject is " + pkValue);
@@ -303,6 +305,24 @@ public class DAOImpl extends AbstractDAO {
       throws ORMException {
     DbResult<T> resultObj = null;
     try {
+      // Handle inheritance: update super class object first and copy fields from updated super object
+      Class superClass = ORMInfoManager.getSuperClass(pojo.getClass());
+      if(superClass != null && superClass.getName().equals(Object.class.getName()) == false) {
+        Object superObj = ORMInfoManager.getSuperClassObject(pojo, true);
+        if(superObj != null) {
+          // Update the super object first
+          String[] superFields = StringUtils.splitString(ORMInfoManager.getPlainDBFieldNames(superObj), sqlConstants.getFieldsSeparator());
+          DbResult<Object> updatedSuperResult = update(superObj, superFields, con, returnUpdatedObject);
+
+          // Copy fields from updated super object to pojo
+          if(updatedSuperResult != null && updatedSuperResult.hasEntities()) {
+            Object updatedSuperObj = updatedSuperResult.getEntities().toArray()[0];
+            ORMInfoManager.copyFields(pojo, updatedSuperObj);
+            logger.finer("update - Copied fields from updated super object to [" + pojo.getClass().getName() + "] object.");
+          }
+        }
+      }
+
       String sql = createUpdateQuery(pojo, fields, criteria, booleanOperator);
       logger.info(sql + ";");
       if(returnUpdatedObject) {

@@ -496,7 +496,7 @@ public class ORMInfoManager {
     if(superClassObj != null && superClassObj.getClass().getName().equals(Object.class.getName()) == false) {
       if(copyFields) {
         logger.finer("About to copy [" + pojo.getClass().getName() + "] object's field values to [" + superClassObj.getClass().getName() + "] object.");
-        copyFields(superClassObj, pojo);
+        copyFieldsFromChildToParent(superClassObj, pojo);
       }
     } // end of if
     return superClassObj;
@@ -1193,33 +1193,21 @@ public class ORMInfoManager {
    */
   public static void copyFields(Object dest, Object src) {
     List<DBField> srcFields = getFields(src);
-    for (DBField srcField : srcFields) {
+    copyFields(dest, src, srcFields);
+  }
+  
+  public static void copyFields(Object dest, Object src, List<DBField> destFields) {
+    for (DBField srcField : destFields) {
       try {
         Field field = srcField.getField();
-        if(field == null || (!field.getType().isPrimitive() && !isWrapperClass(field.getType().getName()))) {
+        if(field == null) {
           continue;
         }
         Object value = Utility.invokeMethod(src, srcField.getGetterMethod());
         if(value == null) {
           continue;
         }
-        DBField destField = getFieldByInstanceMemberName(dest, srcField.getInstanceMemberName());
-        if(destField == null) {
-          continue;
-        }
-        Field destFieldRef = destField.getField();
-        if(destFieldRef == null || (!destFieldRef.getType().isPrimitive() && !isWrapperClass(destFieldRef.getType().getName()))) {
-          continue;
-        }
-        Class<?> srcFieldType = field.getType();
-        Class<?> destFieldType = destFieldRef.getType();
-        if(destFieldType.isAssignableFrom(srcFieldType)) {
-          Utility.invokeMethod(dest, destField.getSetterMethod(), new Object[] {value});
-        }
-        else if(TypeCastUtils.isBoxingMatch(srcFieldType, destFieldType) || TypeCastUtils.isUnboxingMatch(srcFieldType, destFieldType)) {
-          value = TypeCastUtils.convertValue(value, destFieldType);
-          Utility.invokeMethod(dest, destField.getSetterMethod(), new Object[] {value});
-        }
+        Utility.invokeMethod(dest, srcField.getSetterMethod(), new Object[] {value});
       }
       catch(Exception eee) {
         logger.warning("Could not copy [" + srcField.getInstanceMemberName() + "] value from [" + src.getClass().getName() + "] object to [" + dest.getClass().getName() + "] object.");
@@ -1230,6 +1218,11 @@ public class ORMInfoManager {
     }
   }
 
+  public static void copyFieldsFromChildToParent(Object parent, Object child) {
+    List<DBField> parentFields = getFields(parent);
+    copyFields(parent, child, parentFields);
+  }
+  
   /**
    * Returns {@link List} of primary key values of the objects in given array
    * <code>objs</code>.

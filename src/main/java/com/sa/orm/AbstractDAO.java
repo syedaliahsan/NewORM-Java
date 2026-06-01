@@ -199,9 +199,10 @@ public abstract class AbstractDAO implements DAO {
    */
   public <T> T getById(T pojo, String[] fields)
       throws ORMException {
+    Object pkValue = ORMInfoManager.getPrimaryKeyValue(pojo);
     SQLCriterion[] criteria = new SQLCriterion[1];
     criteria[0] = criterionFactory.createEqualTo(ORMInfoManager.getQualifiedPrimaryKey(pojo), null, 
-        ORMInfoManager.getPrimaryKeyValue(pojo), SQLCriterionFactory.INT);
+        pkValue, SQLCriterionFactory.staticGetType(pkValue));
     
     return getById(pojo, fields, null);
   } // end of method get
@@ -224,9 +225,10 @@ public abstract class AbstractDAO implements DAO {
    */
   public <T> T getById(T pojo, String[] fields, Connection con)
       throws ORMException {
+    Object pkValue = ORMInfoManager.getPrimaryKeyValue(pojo);
     SQLCriterion[] criteria = new SQLCriterion[1];
     criteria[0] = criterionFactory.createEqualTo(ORMInfoManager.getQualifiedPrimaryKey(pojo), null, 
-        ORMInfoManager.getPrimaryKeyValue(pojo), SQLCriterionFactory.INT);
+        pkValue, SQLCriterionFactory.staticGetType(pkValue));
     
     return search(pojo, fields, criteria, BOOLEAN_OPERATOR.AND, null, 0, 1, con).iterator().next();
   } // end of method get
@@ -1028,18 +1030,7 @@ public abstract class AbstractDAO implements DAO {
         isNewConnection = true;
       } // end of if
 
-      // super class objects
-      Object superObj = ORMInfoManager.getSuperClassObject(pojo, true);
-      if(superObj != null && superObj.getClass().getName().equals(Object.class.getName()) == false) {
-        update(superObj, con, returnUpdatedObject);
-
-        try {
-          ORMInfoManager.setSuperObjectPKValue(pojo, superObj);
-        } catch(Exception eee) {}
-      } // end of if
-      
-      String[] fields = StringUtils.splitString(ORMInfoManager.getPlainDBFieldNames(pojo), sqlConstants.getFieldsSeparator());
-      logger.finest("update - object fields: " + Arrays.toString(fields));
+      String[] fields = null;
       resultObj = update(pojo, fields, con, returnUpdatedObject);
       if(isNewConnection) {
         con.commit();
@@ -1069,9 +1060,10 @@ public abstract class AbstractDAO implements DAO {
    * {@inheritDoc}
    */
   public <T> DbResult<T> update(T pojo, String[] fields, Connection con, boolean returnUpdatedObject) throws ORMException {
+    Object pkValue = ORMInfoManager.getPrimaryKeyValue(pojo);
     SQLCriterion[] criteria = new SQLCriterion[1];
     criteria[0] = criterionFactory.createEqualTo(ORMInfoManager.getQualifiedPrimaryKey(pojo), null, 
-        ORMInfoManager.getPrimaryKeyValue(pojo), SQLCriterionFactory.INT);
+        pkValue, SQLCriterionFactory.staticGetType(pkValue));
     return update(pojo, fields, criteria, BOOLEAN_OPERATOR.AND, con, returnUpdatedObject);
   } // end of method update
   

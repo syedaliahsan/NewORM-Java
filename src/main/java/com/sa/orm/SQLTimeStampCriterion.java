@@ -92,7 +92,7 @@ public class SQLTimeStampCriterion implements SQLCriterion {
                                Timestamp values[], String dbMask, String javaMask,
                                boolean compareNull) {
 
-    if(StringUtils.getNull(javaMask) == null) {
+    if(operator != NULL && operator != NOT_NULL && StringUtils.getNull(javaMask) == null) {
       throw new IllegalArgumentException("javaMask is required.");
     } // end of if
     this.operator = operator;

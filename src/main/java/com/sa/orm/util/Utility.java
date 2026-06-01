@@ -1208,6 +1208,9 @@ public static String[] getConstants(Object obj) {
   private static Object handlePrimitiveParameter(Object arg, Class<?> paramType) {
     // If argument is not null, return as is
     if (arg != null) {
+        if (paramType == String.class && arg instanceof org.postgresql.util.PGobject) {
+          return ((org.postgresql.util.PGobject) arg).getValue();
+        }
         return arg;
     }
     

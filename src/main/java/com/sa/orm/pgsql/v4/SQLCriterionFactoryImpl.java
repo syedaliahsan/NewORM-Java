@@ -31,6 +31,7 @@ public class SQLCriterionFactoryImpl extends SQLCriterionFactory {
     switch(fieldType) {
       case BOOLEAN: return new SQLBooleanCriterion(SQLCriterion.EQUAL_TO, fieldName, tableName, new Boolean[] {(Boolean)value}, compareNull);
       case INT: return new SQLIntCriterion(SQLCriterion.EQUAL_TO, fieldName, tableName, new Integer[] {(Integer)value}, compareNull);
+      case LONG: return new SQLLongCriterion(SQLCriterion.EQUAL_TO, fieldName, tableName, new Long[] {(Long)value}, compareNull);
       case FLOAT: return new SQLFloatCriterion(SQLCriterion.EQUAL_TO, fieldName, tableName, new Float[] {(Float)value}, compareNull);
       case STRING: return new SQLStringCriterion(SQLCriterion.EQUAL_TO, fieldName, tableName, new String[] {value.toString()}, compareNull);
       case TIME_STAMP: return createTimeStampCriterion(SQLCriterion.EQUAL_TO, fieldName, tableName, new Timestamp[] {(Timestamp)value}, dbMask, javaMask, compareNull);
@@ -43,6 +44,7 @@ public class SQLCriterionFactoryImpl extends SQLCriterionFactory {
     switch(fieldType) {
       case BOOLEAN: return new SQLBooleanCriterion(SQLCriterion.NOT_EQUAL_TO, fieldName, tableName, new Boolean[] {(Boolean)value}, compareNull);
       case INT: return new SQLIntCriterion(SQLCriterion.NOT_EQUAL_TO, fieldName, tableName, new Integer[] {(Integer)value}, compareNull);
+      case LONG: return new SQLLongCriterion(SQLCriterion.NOT_EQUAL_TO, fieldName, tableName, new Long[] {(Long)value}, compareNull);
       case FLOAT: return new SQLFloatCriterion(SQLCriterion.NOT_EQUAL_TO, fieldName, tableName, new Float[] {(Float)value}, compareNull);
       case STRING: return new SQLStringCriterion(SQLCriterion.NOT_EQUAL_TO, fieldName, tableName, new String[] {value.toString()}, compareNull);
       case TIME_STAMP: return createTimeStampCriterion(SQLCriterion.NOT_EQUAL_TO, fieldName, tableName, new Timestamp[] {(Timestamp)value}, dbMask, javaMask, compareNull);
@@ -63,6 +65,10 @@ public class SQLCriterionFactoryImpl extends SQLCriterionFactory {
           Integer[] intArr = new Integer[arr.length];
           for(int i=0; i<arr.length; i++) intArr[i] = (Integer)arr[i];
           return new SQLIntCriterion(SQLCriterion.IN, fieldName, tableName, intArr, compareNull);
+      case LONG: 
+        Long[] longArr = new Long[arr.length];
+        for(int i=0; i<arr.length; i++) longArr[i] = (Long)arr[i];
+        return new SQLLongCriterion(SQLCriterion.IN, fieldName, tableName, longArr, compareNull);
       case FLOAT:
           Float[] floatArr = new Float[arr.length];
           for(int i=0; i<arr.length; i++) floatArr[i] = (Float)arr[i];
@@ -92,6 +98,10 @@ public class SQLCriterionFactoryImpl extends SQLCriterionFactory {
           Integer[] intArr = new Integer[arr.length];
           for(int i=0; i<arr.length; i++) intArr[i] = (Integer)arr[i];
           return new SQLIntCriterion(SQLCriterion.NOT_IN, fieldName, tableName, intArr, compareNull);
+      case LONG: 
+        Long[] longArr = new Long[arr.length];
+        for(int i=0; i<arr.length; i++) longArr[i] = (Long)arr[i];
+        return new SQLLongCriterion(SQLCriterion.NOT_IN, fieldName, tableName, longArr, compareNull);
       case FLOAT:
           Float[] floatArr = new Float[arr.length];
           for(int i=0; i<arr.length; i++) floatArr[i] = (Float)arr[i];
@@ -112,6 +122,7 @@ public class SQLCriterionFactoryImpl extends SQLCriterionFactory {
     switch(fieldType) {
       case BOOLEAN: return new SQLBooleanCriterion(SQLCriterion.NULL, fieldName, tableName, null, false);
       case INT: return new SQLIntCriterion(SQLCriterion.NULL, fieldName, tableName, null, false);
+      case LONG: return new SQLLongCriterion(SQLCriterion.NULL, fieldName, tableName, null, false);
       case FLOAT: return new SQLFloatCriterion(SQLCriterion.NULL, fieldName, tableName, null, false);
       case STRING: return new SQLStringCriterion(SQLCriterion.NULL, fieldName, tableName, null, false);
       case TIME_STAMP: return createTimeStampCriterion(SQLCriterion.NULL, fieldName, tableName, null, null, null, false);
@@ -124,6 +135,7 @@ public class SQLCriterionFactoryImpl extends SQLCriterionFactory {
     switch(fieldType) {
       case BOOLEAN: return new SQLBooleanCriterion(SQLCriterion.NOT_NULL, fieldName, tableName, null, false);
       case INT: return new SQLIntCriterion(SQLCriterion.NOT_NULL, fieldName, tableName, null, false);
+      case LONG: return new SQLLongCriterion(SQLCriterion.NOT_NULL, fieldName, tableName, null, false);
       case FLOAT: return new SQLFloatCriterion(SQLCriterion.NOT_NULL, fieldName, tableName, null, false);
       case STRING: return new SQLStringCriterion(SQLCriterion.NOT_NULL, fieldName, tableName, null, false);
       case TIME_STAMP: return createTimeStampCriterion(SQLCriterion.NOT_NULL, fieldName, tableName, null, null, null, false);
@@ -135,6 +147,7 @@ public class SQLCriterionFactoryImpl extends SQLCriterionFactory {
   public SQLCriterion createBetween(String fieldName, String tableName, Object value1, Object value2, int fieldType, String dbMask, String javaMask, boolean compareNull) {
     switch(fieldType) {
       case INT: return new SQLIntCriterion(SQLCriterion.BETWEEN, fieldName, tableName, new Integer[] {(Integer)value1, (Integer)value2}, compareNull);
+      case LONG: return new SQLLongCriterion(SQLCriterion.BETWEEN, fieldName, tableName, new Long[] {(Long)value1, (Long)value2}, compareNull);
       case FLOAT: return new SQLFloatCriterion(SQLCriterion.BETWEEN, fieldName, tableName, new Float[] {(Float)value1, (Float)value2}, compareNull);
       case STRING: return new SQLStringCriterion(SQLCriterion.BETWEEN, fieldName, tableName, new String[] {value1.toString(), value2.toString()}, compareNull);
       case TIME_STAMP: return createTimeStampCriterion(SQLCriterion.BETWEEN, fieldName, tableName, new Timestamp[] {(Timestamp)value1, (Timestamp)value2}, dbMask, javaMask, compareNull);
@@ -146,6 +159,7 @@ public class SQLCriterionFactoryImpl extends SQLCriterionFactory {
   public SQLCriterion createNotBetween(String fieldName, String tableName, Object value1, Object value2, int fieldType, String dbMask, String javaMask, boolean compareNull) {
     switch(fieldType) {
       case INT: return new SQLIntCriterion(SQLCriterion.NOT_BETWEEN, fieldName, tableName, new Integer[] {(Integer)value1, (Integer)value2}, compareNull);
+      case LONG: return new SQLLongCriterion(SQLCriterion.NOT_BETWEEN, fieldName, tableName, new Long[] {(Long)value1, (Long)value2}, compareNull);
       case FLOAT: return new SQLFloatCriterion(SQLCriterion.NOT_BETWEEN, fieldName, tableName, new Float[] {(Float)value1, (Float)value2}, compareNull);
       case STRING: return new SQLStringCriterion(SQLCriterion.NOT_BETWEEN, fieldName, tableName, new String[] {value1.toString(), value2.toString()}, compareNull);
       case TIME_STAMP: return createTimeStampCriterion(SQLCriterion.NOT_BETWEEN, fieldName, tableName, new Timestamp[] {(Timestamp)value1, (Timestamp)value2}, dbMask, javaMask, compareNull);
@@ -157,6 +171,7 @@ public class SQLCriterionFactoryImpl extends SQLCriterionFactory {
   public SQLCriterion createLessThan(String fieldName, String tableName, Object value, int fieldType, String dbMask, String javaMask, boolean compareNull) {
     switch(fieldType) {
       case INT: return new SQLIntCriterion(SQLCriterion.LESS_THAN, fieldName, tableName, new Integer[] {(Integer)value}, compareNull);
+      case LONG: return new SQLLongCriterion(SQLCriterion.LESS_THAN, fieldName, tableName, new Long[] {(Long)value}, compareNull);
       case FLOAT: return new SQLFloatCriterion(SQLCriterion.LESS_THAN, fieldName, tableName, new Float[] {(Float)value}, compareNull);
       case STRING: return new SQLStringCriterion(SQLCriterion.LESS_THAN, fieldName, tableName, new String[] {value.toString()}, compareNull);
       case TIME_STAMP: return createTimeStampCriterion(SQLCriterion.LESS_THAN, fieldName, tableName, new Timestamp[] {(Timestamp)value}, dbMask, javaMask, compareNull);
@@ -168,6 +183,7 @@ public class SQLCriterionFactoryImpl extends SQLCriterionFactory {
   public SQLCriterion createLessThanEqualTo(String fieldName, String tableName, Object value, int fieldType, String dbMask, String javaMask, boolean compareNull) {
     switch(fieldType) {
       case INT: return new SQLIntCriterion(SQLCriterion.LESS_THAN_EQUAL_TO, fieldName, tableName, new Integer[] {(Integer)value}, compareNull);
+      case LONG: return new SQLLongCriterion(SQLCriterion.LESS_THAN_EQUAL_TO, fieldName, tableName, new Long[] {(Long)value}, compareNull);
       case FLOAT: return new SQLFloatCriterion(SQLCriterion.LESS_THAN_EQUAL_TO, fieldName, tableName, new Float[] {(Float)value}, compareNull);
       case STRING: return new SQLStringCriterion(SQLCriterion.LESS_THAN_EQUAL_TO, fieldName, tableName, new String[] {value.toString()}, compareNull);
       case TIME_STAMP: return createTimeStampCriterion(SQLCriterion.LESS_THAN_EQUAL_TO, fieldName, tableName, new Timestamp[] {(Timestamp)value}, dbMask, javaMask, compareNull);
@@ -179,6 +195,7 @@ public class SQLCriterionFactoryImpl extends SQLCriterionFactory {
   public SQLCriterion createGreaterThan(String fieldName, String tableName, Object value, int fieldType, String dbMask, String javaMask, boolean compareNull) {
     switch(fieldType) {
       case INT: return new SQLIntCriterion(SQLCriterion.GREATER_THAN, fieldName, tableName, new Integer[] {(Integer)value}, compareNull);
+      case LONG: return new SQLLongCriterion(SQLCriterion.GREATER_THAN, fieldName, tableName, new Long[] {(Long)value}, compareNull);
       case FLOAT: return new SQLFloatCriterion(SQLCriterion.GREATER_THAN, fieldName, tableName, new Float[] {(Float)value}, compareNull);
       case STRING: return new SQLStringCriterion(SQLCriterion.GREATER_THAN, fieldName, tableName, new String[] {value.toString()}, compareNull);
       case TIME_STAMP: return createTimeStampCriterion(SQLCriterion.GREATER_THAN, fieldName, tableName, new Timestamp[] {(Timestamp)value}, dbMask, javaMask, compareNull);
@@ -190,6 +207,7 @@ public class SQLCriterionFactoryImpl extends SQLCriterionFactory {
   public SQLCriterion createGreaterThanEqualTo(String fieldName, String tableName, Object value, int fieldType, String dbMask, String javaMask, boolean compareNull) {
     switch(fieldType) {
       case INT: return new SQLIntCriterion(SQLCriterion.GREATER_THAN_EQUAL_TO, fieldName, tableName, new Integer[] {(Integer)value}, compareNull);
+      case LONG: return new SQLLongCriterion(SQLCriterion.GREATER_THAN_EQUAL_TO, fieldName, tableName, new Long[] {(Long)value}, compareNull);
       case FLOAT: return new SQLFloatCriterion(SQLCriterion.GREATER_THAN_EQUAL_TO, fieldName, tableName, new Float[] {(Float)value}, compareNull);
       case STRING: return new SQLStringCriterion(SQLCriterion.GREATER_THAN_EQUAL_TO, fieldName, tableName, new String[] {value.toString()}, compareNull);
       case TIME_STAMP: return createTimeStampCriterion(SQLCriterion.GREATER_THAN_EQUAL_TO, fieldName, tableName, new Timestamp[] {(Timestamp)value}, dbMask, javaMask, compareNull);
